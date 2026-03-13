@@ -1,0 +1,515 @@
+{
+  "info": {
+    "name": "School Student Performance System API",
+    "description": "Complete API collection for demo and developer testing. All secured requests use Authorization: Bearer {{authToken}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.data?.token) {",
+                  "  pm.environment.set('authToken', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Logs in a user and returns JWT token.\n\nExpected success response:\n{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": { \"token\": \"...\", \"profileCompletionRequired\": false, \"user\": { ... } }\n}\n\nExpected error response:\n{\n  \"success\": false,\n  \"message\": \"Invalid credentials\",\n  \"errorCode\": \"UNAUTHORIZED\"\n}"
+          }
+        },
+        {
+          "name": "Register (Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo Student\",\n  \"email\": \"demo.student@test.com\",\n  \"password\": \"Student@123\",\n  \"role\": \"student\",\n  \"studentUID\": \"{{studentUID}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Registers a user account (protected route; admin role required).\n\nExpected response structure:\n{\"success\": true, \"message\": \"Registration successful\", \"data\": {\"token\": \"...\", \"user\": {...}} }"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Create Teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Asha Verma\",\n  \"email\": \"asha.demo@test.com\",\n  \"password\": \"Teacher@123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/create-teacher",
+            "description": "Creates a teacher account.\n\nExpected response:\n{\"success\": true, \"message\": \"Teacher account created successfully\", \"data\": {\"user\": {...}, \"teacher\": {...}} }"
+          }
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"dob\": \"2012-08-15\",\n  \"class\": \"8\",\n  \"section\": \"A\",\n  \"admissionYear\": 2024,\n  \"email\": \"rahul.student@test.com\",\n  \"password\": \"Student@123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/create-student",
+            "description": "Creates a student account with auto-generated UID.\n\nExpected response:\n{\"success\": true, \"message\": \"Student account created successfully\", \"data\": {\"user\": {...}, \"student\": {...}} }"
+          }
+        },
+        {
+          "name": "Assign Teacher Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacherID\": \"T101\",\n  \"role\": \"ClassTeacher\",\n  \"class\": \"8A\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/assign-teacher-role",
+            "description": "Assigns class/subject/sports role to teacher.\n\nExpected response:\n{\"success\": true, \"message\": \"Teacher role assigned successfully\", \"data\": {...} }"
+          }
+        },
+        {
+          "name": "Remove Teacher Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/teacher-role/:mappingId",
+            "description": "Removes assigned teacher role mapping by mapping id.\n\nExpected response:\n{\"success\": true, \"message\": \"Teacher role mapping removed successfully\", \"data\": {...} }"
+          }
+        },
+        {
+          "name": "Get Teachers",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/teachers",
+            "description": "Fetches all teachers.\n\nExpected response:\n{\"success\": true, \"message\": \"Teachers fetched successfully\", \"data\": {\"count\": 0, \"teachers\": []} }"
+          }
+        },
+        {
+          "name": "Get Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/students",
+            "description": "Fetches all students for admin.\n\nExpected response:\n{\"success\": true, \"message\": \"Students fetched successfully\", \"data\": {\"count\": 0, \"students\": []} }"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student",
+      "item": [
+        {
+          "name": "Complete Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gender\": \"Male\",\n  \"address\": \"Sector 15\",\n  \"city\": \"Pune\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"411001\",\n  \"parentName\": \"Ramesh Sharma\",\n  \"parentContact\": \"9876543210\",\n  \"familyIncome\": 280000,\n  \"category\": \"General\",\n  \"aadhaar\": \"123412341234\"\n}"
+            },
+            "url": "{{baseUrl}}/api/students/complete-profile",
+            "description": "Completes student profile and stores Aadhaar as hash.\n\nExpected response:\n{\"success\": true, \"message\": \"Student profile completed successfully\", \"data\": {\"studentUID\": \"...\", \"profileCompleted\": true} }"
+          }
+        },
+        {
+          "name": "Get Student Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/students/:uid",
+            "description": "Fetches student profile by UID (self/admin/teacher).\n\nExpected response:\n{\"success\": true, \"message\": \"Student profile fetched successfully\", \"data\": {...} }"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teacher",
+      "item": [
+        {
+          "name": "My Assignments",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/api/teachers/me/assignments",
+            "description": "Returns class/subject role mappings for logged-in teacher."
+          }
+        },
+        {
+          "name": "My Students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/api/teachers/me/students",
+            "description": "Returns students mapped to teacher classes."
+          }
+        },
+        {
+          "name": "Teacher Role Mappings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/api/teachers/roles/:teacherID",
+            "description": "Returns role mappings for teacherID."
+          }
+        },
+        {
+          "name": "Add Academic Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentUID\": \"{{studentUID}}\",\n  \"subject\": \"Math\",\n  \"marks\": 86,\n  \"examType\": \"Midterm\"\n}"
+            },
+            "url": "{{baseUrl}}/api/teachers/academic-records",
+            "description": "Adds student academic record."
+          }
+        },
+        {
+          "name": "Update Academic Record",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marks\": 90,\n  \"examType\": \"Final\"\n}"
+            },
+            "url": "{{baseUrl}}/api/teachers/academic-records/:recordId",
+            "description": "Updates only teacher-owned academic records."
+          }
+        },
+        {
+          "name": "Get Student Academic Records",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": "{{baseUrl}}/api/teachers/academic-records/student/:uid",
+            "description": "Fetches academic records for a student."
+          }
+        },
+        {
+          "name": "Add Guidance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentUID\": \"{{studentUID}}\",\n  \"message\": \"Focus on algebra revision this week.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/teachers/guidance",
+            "description": "Adds teacher guidance note for student."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Participation",
+      "item": [
+        {
+          "name": "Add Participation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentUID\": \"{{studentUID}}\",\n  \"activityName\": \"Inter-house debate\",\n  \"category\": \"activity\",\n  \"date\": \"2026-03-14\"\n}"
+            },
+            "url": "{{baseUrl}}/api/participation",
+            "description": "Creates participation record in Pending state."
+          }
+        },
+        {
+          "name": "Approve Participation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\"\n}"
+            },
+            "url": "{{baseUrl}}/api/participation/approve/:id",
+            "description": "Class teacher approves or rejects participation."
+          }
+        },
+        {
+          "name": "Get Student Participation",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/participation/student/:uid",
+            "description": "Returns participation history for student."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Achievements",
+      "item": [
+        {
+          "name": "Add Achievement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentUID\": \"{{studentUID}}\",\n  \"eventName\": \"District Chess Winner\",\n  \"category\": \"extracurricular\",\n  \"level\": \"District\",\n  \"position\": \"1st Prize\",\n  \"certificateURL\": \"https://example.com/certificate.pdf\"\n}"
+            },
+            "url": "{{baseUrl}}/api/achievements",
+            "description": "Adds achievement entry with computed points in Pending state."
+          }
+        },
+        {
+          "name": "Verify Achievement",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\"\n}"
+            },
+            "url": "{{baseUrl}}/api/achievements/:achievementId/verify",
+            "description": "Class teacher verifies achievement as Approved or Rejected."
+          }
+        },
+        {
+          "name": "Get Student Achievements",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/achievements/student/:uid",
+            "description": "Fetches achievement history for student."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schemes",
+      "item": [
+        {
+          "name": "Create Scheme",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schemeName\": \"National Means Merit Scholarship\",\n  \"description\": \"Scholarship for meritorious students\",\n  \"minAcademicScore\": 75,\n  \"minSPI\": 70,\n  \"maxFamilyIncome\": 350000,\n  \"eligibleClasses\": [\"8\", \"9\"],\n  \"sportsRequired\": false,\n  \"activityRequired\": false,\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/schemes",
+            "description": "Creates a government scheme rule set (admin only)."
+          }
+        },
+        {
+          "name": "Get Schemes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/schemes",
+            "description": "Fetches all schemes for school."
+          }
+        },
+        {
+          "name": "Get Scheme By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/schemes/:id",
+            "description": "Fetches one scheme by id."
+          }
+        },
+        {
+          "name": "Get Eligible Schemes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/schemes/eligible/:studentUID",
+            "description": "Evaluates and returns schemes student is eligible for based on marks, SPI, class, income, and activity/sports gates."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cards",
+      "item": [
+        {
+          "name": "Download Student Card (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/student/:uid/card",
+            "description": "Downloads government-style student achievement card PDF. Response content-type: application/pdf."
+          }
+        },
+        {
+          "name": "Get Student QR Code (PNG)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/student/:uid/qrcode",
+            "description": "Returns QR image encoding public verification URL. Response content-type: image/png."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Verification",
+      "item": [
+        {
+          "name": "Get Public Student Verification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/public/student/:uid",
+            "description": "Public endpoint for verification.\n\nExpected response:\n{\n  \"success\": true,\n  \"message\": \"Public student verification fetched successfully\",\n  \"data\": {\n    \"name\": \"Rahul Sharma\",\n    \"class\": \"8\",\n    \"section\": \"A\",\n    \"spi\": 78,\n    \"topAchievements\": [ ... ],\n    \"verificationStatus\": \"Verified\"\n  }\n}\n\nSensitive fields remain hidden."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Principal Analytics",
+      "item": [
+        {
+          "name": "Principal Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/principal/analytics",
+            "description": "Comprehensive principal dashboard analytics."
+          }
+        },
+        {
+          "name": "Principal SPI Ranking",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/principal/spi",
+            "description": "Returns SPI ranking and students needing support."
+          }
+        },
+        {
+          "name": "Principal Top Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/principal/top-students",
+            "description": "Returns top SPI, academic, and sports leaders."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "authToken", "value": "" },
+    { "key": "adminEmail", "value": "admin@school.edu" },
+    { "key": "adminPassword", "value": "Admin@123" },
+    { "key": "teacherEmail", "value": "asha.verma@school.edu" },
+    { "key": "teacherPassword", "value": "Teacher@123" },
+    { "key": "studentEmail", "value": "rahul.0001-rah-15082012-2024@student.school.edu" },
+    { "key": "studentPassword", "value": "Student@123" },
+    { "key": "studentUID", "value": "0001-RAH-15082012-2024" }
+  ]
+}

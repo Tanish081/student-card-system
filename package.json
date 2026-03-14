@@ -8,6 +8,7 @@
     "dev:client": "npm --prefix client run dev",
     "build:client": "npm --prefix client run build",
     "seed": "npm --prefix server run seed",
+    "generate:testdata": "npm --prefix server run generate:testdata",
     "test:edge": "npm --prefix server run test:edge"
   }
 }

@@ -13,6 +13,7 @@ const TeacherDashboard = () => {
   const [students, setStudents] = useState([]);
   const [classRanking, setClassRanking] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
+  const [uidPrefix, setUidPrefix] = useState('');
   const [guidanceForm, setGuidanceForm] = useState({ studentUID: '', message: '' });
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -21,6 +22,12 @@ const TeacherDashboard = () => {
     () => assignments.filter((entry) => entry.role === 'ClassTeacher'),
     [assignments]
   );
+
+  const filteredStudents = useMemo(() => {
+    const query = uidPrefix.trim().toUpperCase();
+    if (!query) return students;
+    return students.filter((student) => String(student.uid || '').toUpperCase().startsWith(query));
+  }, [students, uidPrefix]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -148,6 +155,16 @@ const TeacherDashboard = () => {
 
           <section className="card" style={{ marginTop: '1rem' }}>
             <h3 style={{ marginTop: 0 }}>Assigned Students</h3>
+            <div style={{ marginBottom: '0.7rem' }}>
+              <label htmlFor="uidPrefixSearch">Search by UID prefix (first 4 letters)</label>
+              <input
+                id="uidPrefixSearch"
+                value={uidPrefix}
+                maxLength={4}
+                onChange={(event) => setUidPrefix(event.target.value.toUpperCase())}
+                placeholder="e.g. RAHU"
+              />
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="table">
                 <thead>
@@ -159,8 +176,8 @@ const TeacherDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length ? (
-                    students.map((student) => (
+                  {filteredStudents.length ? (
+                    filteredStudents.map((student) => (
                       <tr key={student.uid}>
                         <td>{student.name}</td>
                         <td>{student.uid}</td>
@@ -175,7 +192,7 @@ const TeacherDashboard = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4}>No assigned students found.</td>
+                      <td colSpan={4}>No students match this UID prefix.</td>
                     </tr>
                   )}
                 </tbody>

@@ -4,6 +4,16 @@ import api from '../services/api';
 const EVENT_TYPES = ['competition', 'workshop', 'sports', 'scholarship', 'training'];
 const CATEGORIES = ['science', 'technology', 'sports', 'arts', 'mathematics', 'debate', 'robotics', 'music'];
 
+const ALLOWED_FILE_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+const MAX_FILE_SIZE_KB = 4096;
+
 const initialForm = {
   title: '',
   description: '',
@@ -21,11 +31,21 @@ const splitInput = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+
 const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship = true }) => {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const eventTypeOptions = useMemo(() => {
     if (allowScholarship) return EVENT_TYPES;
@@ -39,6 +59,26 @@ const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship 
     setLoading(true);
 
     try {
+      const attachments = await Promise.all(
+        selectedFiles.map(async (file) => {
+          if (!ALLOWED_FILE_TYPES.has(file.type)) {
+            throw new Error(`Unsupported file type for ${file.name}`);
+          }
+
+          const sizeKB = Math.round(file.size / 1024);
+          if (sizeKB > MAX_FILE_SIZE_KB) {
+            throw new Error(`${file.name} exceeds ${MAX_FILE_SIZE_KB} KB`);
+          }
+
+          return {
+            fileName: file.name,
+            mimeType: file.type,
+            dataUrl: await fileToDataUrl(file),
+            sizeKB
+          };
+        })
+      );
+
       await api.post('/opportunities', {
         title: form.title,
         description: form.description,
@@ -47,10 +87,13 @@ const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship 
         skillTags: splitInput(form.skillTagsInput),
         eligibleClasses: splitInput(form.eligibleClassesInput).map((item) => item.toUpperCase()),
         minSPI: Number(form.minSPI || 0),
-        deadline: form.deadline
+        deadline: form.deadline,
+        attachments
       });
 
       setForm(initialForm);
+      setSelectedFiles([]);
+      setFileInputKey((prev) => prev + 1);
       setNotice('Opportunity posted successfully.');
     } catch (apiError) {
       setError(apiError?.response?.data?.message || 'Failed to post opportunity');
@@ -163,6 +206,23 @@ const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship 
               onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))}
               required
             />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label htmlFor="opportunity-attachments">Attachments (PDF, JPG, PNG, WEBP, DOC, DOCX)</label>
+            <input
+              key={fileInputKey}
+              id="opportunity-attachments"
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
+            />
+            {selectedFiles.length ? (
+              <p style={{ margin: '0.4rem 0 0', color: '#475569', fontSize: '0.85rem' }}>
+                {selectedFiles.length} file(s): {selectedFiles.map((file) => file.name).join(', ')}
+              </p>
+            ) : null}
           </div>
         </div>
 

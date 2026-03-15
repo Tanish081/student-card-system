@@ -13,6 +13,32 @@ const CATEGORIES = [
 ];
 const STATUSES = ['active', 'expired'];
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    fileName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    mimeType: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true
+    },
+    dataUrl: {
+      type: String,
+      required: true
+    },
+    sizeKB: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  },
+  { _id: false }
+);
+
 const normalizeArray = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
@@ -58,6 +84,10 @@ const opportunitySchema = new mongoose.Schema(
       type: [String],
       default: [],
       set: normalizeArray
+    },
+    attachments: {
+      type: [attachmentSchema],
+      default: []
     },
     eligibleClasses: {
       type: [String],

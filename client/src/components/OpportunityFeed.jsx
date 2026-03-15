@@ -8,6 +8,8 @@ const formatDate = (value) => {
   return date.toLocaleString();
 };
 
+const isImageMime = (mimeType = '') => String(mimeType).startsWith('image/');
+
 const OpportunityFeed = () => {
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +92,29 @@ const OpportunityFeed = () => {
                 {expandedState.open && expandedState.details ? (
                   <div style={{ marginTop: '0.8rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.7rem' }}>
                     <p style={{ marginTop: 0 }}>{expandedState.details.description}</p>
+
+                    {expandedState.details.attachments?.length ? (
+                      <div style={{ marginBottom: '0.6rem' }}>
+                        <p style={{ margin: '0 0 0.4rem', fontWeight: 600 }}>Attachments</p>
+                        <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                          {expandedState.details.attachments.map((attachment, index) => (
+                            <li key={`${attachment.fileName}-${index}`}>
+                              <a
+                                href={attachment.dataUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={attachment.fileName}
+                              >
+                                {attachment.fileName}
+                              </a>{' '}
+                              ({attachment.mimeType})
+                              {isImageMime(attachment.mimeType) ? ' - image preview available' : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
                     <p style={{ margin: 0, color: '#334155' }}>
                       Contact: {expandedState.details.postedByName || expandedState.details.role}
                     </p>

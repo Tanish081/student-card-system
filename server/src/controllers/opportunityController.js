@@ -30,6 +30,65 @@ const normalizeClassValues = (values = []) =>
 const normalizeSkillTags = (values = []) =>
   normalizeArray(values).map((item) => String(item).toLowerCase());
 
+const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+
+const MAX_ATTACHMENT_SIZE_KB = 4096;
+
+const estimateDataUrlSizeKB = (dataUrl = '') => {
+  const encoded = String(dataUrl).split(',')[1] || '';
+  const bytes = Math.floor((encoded.length * 3) / 4);
+  return Math.round(bytes / 1024);
+};
+
+const sanitizeAttachments = (attachments = []) => {
+  const normalized = Array.isArray(attachments) ? attachments : [attachments];
+
+  return normalized.map((item, index) => {
+    const fileName = String(item?.fileName || '').trim();
+    const mimeType = String(item?.mimeType || '').trim().toLowerCase();
+    const dataUrl = String(item?.dataUrl || '');
+    const sizeKB = Number(item?.sizeKB || estimateDataUrlSizeKB(dataUrl));
+
+    if (!fileName || !mimeType || !dataUrl) {
+      const error = new Error(`attachments[${index}] is missing fileName, mimeType, or dataUrl`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!ALLOWED_ATTACHMENT_MIME_TYPES.has(mimeType)) {
+      const error = new Error(`Unsupported attachment type: ${mimeType}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!dataUrl.startsWith(`data:${mimeType};base64,`)) {
+      const error = new Error(`attachments[${index}] dataUrl format is invalid`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (sizeKB > MAX_ATTACHMENT_SIZE_KB) {
+      const error = new Error(`Attachment ${fileName} exceeds ${MAX_ATTACHMENT_SIZE_KB} KB`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return {
+      fileName,
+      mimeType,
+      dataUrl,
+      sizeKB
+    };
+  });
+};
+
 const sanitizeOpportunityPayload = (payload, { isCreate = false } = {}) => {
   const next = {};
 
@@ -40,6 +99,7 @@ const sanitizeOpportunityPayload = (payload, { isCreate = false } = {}) => {
   if (payload.category !== undefined) next.category = String(payload.category).trim().toLowerCase();
 
   if (payload.skillTags !== undefined) next.skillTags = normalizeSkillTags(payload.skillTags);
+  if (payload.attachments !== undefined) next.attachments = sanitizeAttachments(payload.attachments);
   if (payload.eligibleClasses !== undefined) {
     next.eligibleClasses = normalizeClassValues(payload.eligibleClasses);
   }
@@ -135,6 +195,7 @@ const formatOpportunityOutput = (opportunity, enrichments = {}) => ({
   eventType: opportunity.eventType,
   category: opportunity.category,
   skillTags: opportunity.skillTags || [],
+  attachments: opportunity.attachments || [],
   eligibleClasses: opportunity.eligibleClasses || [],
   minSPI: opportunity.minSPI,
   postedBy: opportunity.postedBy,

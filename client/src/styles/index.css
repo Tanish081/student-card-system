@@ -144,26 +144,65 @@ textarea {
   }
 }
 
-@keyframes gradientMove {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+@keyframes auroraFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.55; }
+  40%       { transform: translate(35px, -25px) scale(1.1); opacity: 0.75; }
+  70%       { transform: translate(-20px, 18px) scale(0.95); opacity: 0.4; }
 }
 
 .login-bg {
-  background: linear-gradient(-45deg, #1e3a8a, #4f46e5, #7c3aed, #0ea5e9);
-  background-size: 400% 400%;
-  animation: gradientMove 15s ease infinite;
+  background: #070916;
 }
 
-/* login input placeholder override */
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  animation: auroraFloat ease-in-out infinite;
+}
+
+.aurora-1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(124,58,237,0.38), transparent 70%);
+  top: -140px;
+  left: -100px;
+  animation-duration: 13s;
+}
+
+.aurora-2 {
+  width: 600px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(79,70,229,0.28), transparent 70%);
+  bottom: -140px;
+  right: -80px;
+  animation-duration: 16s;
+  animation-delay: -5s;
+}
+
+.aurora-3 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(14,165,233,0.22), transparent 70%);
+  top: 40%;
+  left: 38%;
+  animation-duration: 11s;
+  animation-delay: -8s;
+}
+
+.login-image-panel {
+  display: flex;
+}
+
+/* login input placeholder */
 .login-bg input::placeholder,
 .login-bg select::placeholder {
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 640px) {
+  .login-image-panel {
+    display: none;
+  }
 }

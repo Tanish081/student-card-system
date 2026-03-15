@@ -98,6 +98,7 @@ const LoginPage = () => {
 
       {/* Split container */}
       <div
+        className="login-shell"
         style={{
           position: 'relative',
           zIndex: 1,
@@ -113,11 +114,14 @@ const LoginPage = () => {
           border: '1px solid rgba(255,255,255,0.07)',
         }}
       >
+        <div aria-hidden="true" className="login-surface-texture" />
+
         {/* Left: Image panel */}
         <div className="login-image-panel" style={{
           width: '340px',
           flexShrink: 0,
           position: 'relative',
+          zIndex: 2,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -180,9 +184,12 @@ const LoginPage = () => {
         {/* Right: Form panel */}
         <div
           ref={cardRef}
+          className="login-form-panel"
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           style={{
+            position: 'relative',
+            zIndex: 2,
             width: '380px',
             flexShrink: 0,
             background: 'rgba(10,12,30,0.94)',
@@ -199,23 +206,17 @@ const LoginPage = () => {
           }}
         >
           <div style={{ marginBottom: '2rem' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '48px',
-              height: '48px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-              fontSize: '1.4rem',
-              marginBottom: '1.1rem',
-              boxShadow: '0 4px 20px rgba(124,58,237,0.45)',
-            }}>🎓</div>
-            <h1 style={{ margin: '0 0 0.3rem', fontSize: '1.5rem', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
-              Welcome back
+            <p style={{ margin: '0 0 0.9rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              Student Performance Portal
+            </p>
+            <h1 style={{ margin: '0 0 0.45rem', fontSize: '2.05rem', fontWeight: 700, lineHeight: 1.02, letterSpacing: '-0.04em', color: '#f8fafc' }}>
+              Student SPI
             </h1>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>
-              Sign in to your Student SPI account
+            <p style={{ margin: '0 0 1.2rem', fontSize: '0.9rem', color: 'rgba(196,181,253,0.82)', fontWeight: 600, letterSpacing: '0.04em' }}>
+              Access • Records • Achievement
+            </p>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: 'rgba(255,255,255,0.34)', lineHeight: 1.7, maxWidth: '280px' }}>
+              Sign in to continue to your dashboard and manage performance insights securely.
             </p>
           </div>
 

@@ -195,6 +195,33 @@ textarea {
   display: flex;
 }
 
+.login-shell {
+  isolation: isolate;
+}
+
+.login-surface-texture {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.06), transparent 28%),
+    radial-gradient(circle at 80% 75%, rgba(124, 58, 237, 0.12), transparent 24%);
+  background-size: 24px 24px, 24px 24px, 100% 100%, 100% 100%;
+  mix-blend-mode: soft-light;
+}
+
+.login-form-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 22%);
+}
+
 /* login input placeholder */
 .login-bg input::placeholder,
 .login-bg select::placeholder {

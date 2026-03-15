@@ -36,6 +36,15 @@ const OpportunityFeed = () => {
 
   const handleApply = async (opportunityId) => {
     try {
+      await api.post(`/opportunities/${opportunityId}/apply`);
+      await loadFeed();
+    } catch (apiError) {
+      setError(apiError?.response?.data?.message || 'Failed to apply for opportunity');
+    }
+  };
+
+  const handleViewDetails = async (opportunityId) => {
+    try {
       const response = await api.get(`/opportunities/${opportunityId}`);
       const details = response.data.data;
 
@@ -85,9 +94,23 @@ const OpportunityFeed = () => {
                   <strong>Relevance Score:</strong> {item.relevanceScore}
                 </p>
 
-                <button type="button" onClick={() => handleApply(item.id)}>
-                  {expandedState.open ? 'Hide Details' : 'Apply'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleApply(item.id)}
+                    disabled={item.hasApplied}
+                    className={item.hasApplied ? 'secondary' : undefined}
+                  >
+                    {item.hasApplied ? `Applied (${item.applicationStatus || 'applied'})` : 'Apply'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => handleViewDetails(item.id)}
+                  >
+                    {expandedState.open ? 'Hide Details' : 'View Details'}
+                  </button>
+                </div>
 
                 {expandedState.open && expandedState.details ? (
                   <div style={{ marginTop: '0.8rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.7rem' }}>
@@ -100,7 +123,7 @@ const OpportunityFeed = () => {
                           {expandedState.details.attachments.map((attachment, index) => (
                             <li key={`${attachment.fileName}-${index}`}>
                               <a
-                                href={attachment.dataUrl}
+                                href={attachment.fileUrl || attachment.dataUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 download={attachment.fileName}

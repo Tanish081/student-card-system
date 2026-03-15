@@ -10,6 +10,8 @@ import { sendError, sendSuccess } from '../utils/apiResponse.js';
 
 const studentClassKey = (student) => `${student.class}${student.section}`;
 
+const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const teacherHasClassAccess = (roles, classKey) =>
   roles.some((entry) => entry.class && entry.class === classKey);
 
@@ -106,6 +108,32 @@ export const getMyStudents = asyncHandler(async (req, res) => {
   students = students.filter((student) => allowedClasses.has(studentClassKey(student)));
 
   return sendSuccess(res, 'Students for teacher fetched successfully', {
+    count: students.length,
+    students
+  });
+});
+
+export const searchMyStudentsByUIDPrefix = asyncHandler(async (req, res) => {
+  const teacherID = req.user.linkedTeacherID;
+  const schoolId = req.schoolId;
+  const uidPrefix = String(req.query.uidPrefix || '').trim();
+
+  if (!teacherID) return sendError(res, 'Teacher account is not linked to teacherID', 400);
+  if (!uidPrefix) return sendError(res, 'uidPrefix query parameter is required', 400);
+
+  const roles = await TeacherRole.find({ teacherID, schoolId }).lean();
+  const allowedClasses = new Set(roles.map((item) => item.class).filter(Boolean));
+
+  const regex = new RegExp(`^${escapeRegex(uidPrefix)}`, 'i');
+  let students = await Student.find({ schoolId, uid: regex })
+    .sort({ class: 1, section: 1, firstName: 1 })
+    .limit(100)
+    .lean();
+
+  students = students.filter((student) => allowedClasses.has(studentClassKey(student)));
+
+  return sendSuccess(res, 'Students filtered by UID prefix successfully', {
+    uidPrefix: uidPrefix.toUpperCase(),
     count: students.length,
     students
   });

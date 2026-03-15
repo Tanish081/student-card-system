@@ -26,9 +26,14 @@ const attachmentSchema = new mongoose.Schema(
       trim: true,
       lowercase: true
     },
+    fileUrl: {
+      type: String,
+      default: null,
+      trim: true
+    },
     dataUrl: {
       type: String,
-      required: true
+      default: null
     },
     sizeKB: {
       type: Number,

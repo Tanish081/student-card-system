@@ -5,6 +5,10 @@ export const notFoundHandler = (req, res) => {
 };
 
 export const errorHandler = (err, req, res, next) => {
+  if (err?.name === 'MulterError') {
+    return sendError(res, err.message || 'File upload error', 400);
+  }
+
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 

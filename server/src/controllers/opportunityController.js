@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Opportunity, { CATEGORIES, EVENT_TYPES } from '../models/Opportunity.js';
+import OpportunityApplication from '../models/OpportunityApplication.js';
 import Student from '../models/Student.js';
 import TeacherRole from '../models/TeacherRole.js';
 import { TEACHER_SUB_ROLES } from '../config/constants.js';
@@ -11,6 +12,7 @@ import {
   scoreOpportunityForStudent
 } from '../services/opportunityScoringService.js';
 import { logAuditAction } from '../services/auditService.js';
+import { computeStudentSPI } from '../services/spiService.js';
 
 const normalizeArray = (value = []) => {
   if (!value) return [];
@@ -47,17 +49,31 @@ const estimateDataUrlSizeKB = (dataUrl = '') => {
   return Math.round(bytes / 1024);
 };
 
+const toAbsoluteFileUrl = (req, relativePath) => {
+  if (!relativePath) return null;
+  if (/^https?:\/\//i.test(relativePath)) return relativePath;
+
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const protocol = forwardedProto || req.protocol || 'https';
+  const host = req.get('host');
+  if (!host) return relativePath;
+  return `${protocol}://${host}${relativePath}`;
+};
+
 const sanitizeAttachments = (attachments = []) => {
   const normalized = Array.isArray(attachments) ? attachments : [attachments];
 
   return normalized.map((item, index) => {
     const fileName = String(item?.fileName || '').trim();
     const mimeType = String(item?.mimeType || '').trim().toLowerCase();
-    const dataUrl = String(item?.dataUrl || '');
-    const sizeKB = Number(item?.sizeKB || estimateDataUrlSizeKB(dataUrl));
+    const dataUrl = item?.dataUrl ? String(item.dataUrl) : null;
+    const fileUrl = item?.fileUrl ? String(item.fileUrl) : null;
+    const sizeKB = Number(item?.sizeKB || estimateDataUrlSizeKB(dataUrl || ''));
 
-    if (!fileName || !mimeType || !dataUrl) {
-      const error = new Error(`attachments[${index}] is missing fileName, mimeType, or dataUrl`);
+    if (!fileName || !mimeType || (!dataUrl && !fileUrl)) {
+      const error = new Error(
+        `attachments[${index}] is missing fileName, mimeType, and file payload`
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -68,7 +84,7 @@ const sanitizeAttachments = (attachments = []) => {
       throw error;
     }
 
-    if (!dataUrl.startsWith(`data:${mimeType};base64,`)) {
+    if (dataUrl && !dataUrl.startsWith(`data:${mimeType};base64,`)) {
       const error = new Error(`attachments[${index}] dataUrl format is invalid`);
       error.statusCode = 400;
       throw error;
@@ -83,11 +99,21 @@ const sanitizeAttachments = (attachments = []) => {
     return {
       fileName,
       mimeType,
+      fileUrl,
       dataUrl,
       sizeKB
     };
   });
 };
+
+const fileToAttachmentMetadata = (files = []) =>
+  files.map((file) => ({
+    fileName: file.originalname,
+    mimeType: file.mimetype,
+    fileUrl: `/uploads/opportunities/${file.filename}`,
+    dataUrl: null,
+    sizeKB: Math.round((Number(file.size || 0) / 1024) * 100) / 100
+  }));
 
 const sanitizeOpportunityPayload = (payload, { isCreate = false } = {}) => {
   const next = {};
@@ -188,14 +214,20 @@ const enforceTeacherOpportunityScope = async ({ req, payload, schoolId }) => {
   }
 };
 
-const formatOpportunityOutput = (opportunity, enrichments = {}) => ({
+const formatOpportunityOutput = (opportunity, req, enrichments = {}) => ({
   id: opportunity._id,
   title: opportunity.title,
   description: opportunity.description,
   eventType: opportunity.eventType,
   category: opportunity.category,
   skillTags: opportunity.skillTags || [],
-  attachments: opportunity.attachments || [],
+  attachments: (opportunity.attachments || []).map((item) => ({
+    fileName: item.fileName,
+    mimeType: item.mimeType,
+    fileUrl: item.fileUrl ? toAbsoluteFileUrl(req, item.fileUrl) : null,
+    dataUrl: item.dataUrl || null,
+    sizeKB: item.sizeKB || 0
+  })),
   eligibleClasses: opportunity.eligibleClasses || [],
   minSPI: opportunity.minSPI,
   postedBy: opportunity.postedBy,
@@ -209,7 +241,17 @@ const formatOpportunityOutput = (opportunity, enrichments = {}) => ({
 
 export const createOpportunity = asyncHandler(async (req, res) => {
   const schoolId = req.schoolId;
-  const payload = sanitizeOpportunityPayload(req.body, { isCreate: true });
+  const incomingAttachments = req.files?.length
+    ? fileToAttachmentMetadata(req.files)
+    : req.body.attachments;
+
+  const payload = sanitizeOpportunityPayload(
+    {
+      ...req.body,
+      attachments: incomingAttachments
+    },
+    { isCreate: true }
+  );
 
   await enforceTeacherOpportunityScope({ req, payload, schoolId });
 
@@ -234,7 +276,7 @@ export const createOpportunity = asyncHandler(async (req, res) => {
     }
   });
 
-  return sendSuccess(res, 'Opportunity created successfully', formatOpportunityOutput(opportunity), 201);
+  return sendSuccess(res, 'Opportunity created successfully', formatOpportunityOutput(opportunity, req), 201);
 });
 
 export const getOpportunityFeed = asyncHandler(async (req, res) => {
@@ -271,16 +313,35 @@ export const getOpportunityFeed = asyncHandler(async (req, res) => {
         context
       });
 
-      return formatOpportunityOutput(item, {
+      return formatOpportunityOutput(item, req, {
         relevanceScore: score.relevanceScore,
         successProbability: score.successProbability
       });
     })
     .sort((a, b) => b.relevanceScore - a.relevanceScore);
 
+  const opportunityIds = scored.map((item) => item.id);
+  const myApplications = await OpportunityApplication.find({
+    schoolId,
+    studentUID,
+    opportunityId: { $in: opportunityIds }
+  })
+    .select('opportunityId status')
+    .lean();
+
+  const appMap = new Map(
+    myApplications.map((item) => [String(item.opportunityId), item.status])
+  );
+
+  const enriched = scored.map((item) => ({
+    ...item,
+    hasApplied: appMap.has(String(item.id)),
+    applicationStatus: appMap.get(String(item.id)) || null
+  }));
+
   return sendSuccess(res, 'Opportunity feed fetched successfully', {
-    count: scored.length,
-    opportunities: scored
+    count: enriched.length,
+    opportunities: enriched
   });
 });
 
@@ -300,7 +361,7 @@ export const getOpportunityById = asyncHandler(async (req, res) => {
   if (!opportunity) return sendError(res, 'Opportunity not found', 404);
 
   if (req.user.role !== 'student') {
-    return sendSuccess(res, 'Opportunity fetched successfully', formatOpportunityOutput(opportunity));
+    return sendSuccess(res, 'Opportunity fetched successfully', formatOpportunityOutput(opportunity, req));
   }
 
   const studentUID = req.user.linkedStudentUID;
@@ -317,11 +378,21 @@ export const getOpportunityById = asyncHandler(async (req, res) => {
     context
   });
 
+  const application = await OpportunityApplication.findOne({
+    schoolId,
+    opportunityId: opportunity._id,
+    studentUID
+  })
+    .select('status')
+    .lean();
+
   return sendSuccess(res, 'Opportunity fetched successfully',
-    formatOpportunityOutput(opportunity, {
+    formatOpportunityOutput(opportunity, req, {
       relevanceScore: score.relevanceScore,
       successProbability: score.successProbability,
-      scoreBreakdown: score.metrics
+      scoreBreakdown: score.metrics,
+      hasApplied: Boolean(application),
+      applicationStatus: application?.status || null
     })
   );
 });
@@ -345,7 +416,14 @@ export const updateOpportunity = asyncHandler(async (req, res) => {
     return sendError(res, 'Only creator or admin can update this opportunity', 403);
   }
 
-  const payload = sanitizeOpportunityPayload(req.body);
+  const incomingAttachments = req.files?.length
+    ? fileToAttachmentMetadata(req.files)
+    : req.body.attachments;
+
+  const payload = sanitizeOpportunityPayload({
+    ...req.body,
+    ...(incomingAttachments !== undefined ? { attachments: incomingAttachments } : {})
+  });
   const merged = {
     eventType: payload.eventType ?? opportunity.eventType,
     category: payload.category ?? opportunity.category
@@ -371,7 +449,7 @@ export const updateOpportunity = asyncHandler(async (req, res) => {
     }
   });
 
-  return sendSuccess(res, 'Opportunity updated successfully', formatOpportunityOutput(opportunity));
+  return sendSuccess(res, 'Opportunity updated successfully', formatOpportunityOutput(opportunity, req));
 });
 
 export const deleteOpportunity = asyncHandler(async (req, res) => {
@@ -402,5 +480,122 @@ export const deleteOpportunity = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, 'Opportunity deleted successfully', {
     id: opportunity._id
+  });
+});
+
+export const applyToOpportunity = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'student') {
+    return sendError(res, 'Only students can apply to opportunities', 403);
+  }
+
+  const schoolId = req.schoolId;
+  await expireOutdatedOpportunities(schoolId);
+
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return sendError(res, 'Invalid opportunity id', 400);
+  }
+
+  const studentUID = req.user.linkedStudentUID;
+  if (!studentUID) {
+    return sendError(res, 'Student account is not linked to a student UID', 400);
+  }
+
+  const [student, opportunity] = await Promise.all([
+    Student.findOne({ schoolId, uid: studentUID }).lean(),
+    Opportunity.findOne({
+      _id: req.params.id,
+      schoolId,
+      status: 'active',
+      deadline: { $gte: new Date() }
+    }).lean()
+  ]);
+
+  if (!student) return sendError(res, 'Student record not found', 404);
+  if (!opportunity) return sendError(res, 'Opportunity not found or expired', 404);
+
+  if (!(opportunity.eligibleClasses || []).includes(String(student.class).toUpperCase())) {
+    return sendError(res, 'Student class is not eligible for this opportunity', 403);
+  }
+
+  const spi = await computeStudentSPI(studentUID, schoolId);
+  if (Number(spi.spi) < Number(opportunity.minSPI || 0)) {
+    return sendError(res, 'Student SPI is below the minimum requirement', 403);
+  }
+
+  const context = await buildStudentOpportunityContext({ student, schoolId });
+  const score = scoreOpportunityForStudent({ opportunity, context });
+
+  const application = await OpportunityApplication.findOneAndUpdate(
+    {
+      schoolId,
+      opportunityId: opportunity._id,
+      studentUID
+    },
+    {
+      $setOnInsert: {
+        studentUserId: req.user._id,
+        status: 'applied',
+        relevanceScoreSnapshot: score.relevanceScore,
+        successProbabilitySnapshot: score.successProbability
+      }
+    },
+    {
+      new: true,
+      upsert: true
+    }
+  );
+
+  await logAuditAction({
+    req,
+    action: 'opportunity-applied',
+    entityType: 'OpportunityApplication',
+    entityId: application._id,
+    metadata: {
+      opportunityId: opportunity._id,
+      studentUID
+    }
+  });
+
+  return sendSuccess(res, 'Applied to opportunity successfully', {
+    id: application._id,
+    opportunityId: application.opportunityId,
+    status: application.status,
+    relevanceScore: application.relevanceScoreSnapshot,
+    successProbability: application.successProbabilitySnapshot
+  }, 201);
+});
+
+export const getOpportunityApplications = asyncHandler(async (req, res) => {
+  const schoolId = req.schoolId;
+
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return sendError(res, 'Invalid opportunity id', 400);
+  }
+
+  const opportunity = await Opportunity.findOne({
+    _id: req.params.id,
+    schoolId
+  })
+    .select('postedBy title')
+    .lean();
+
+  if (!opportunity) return sendError(res, 'Opportunity not found', 404);
+
+  if (req.user.role === 'teacher' && String(opportunity.postedBy) !== String(req.user._id)) {
+    return sendError(res, 'Teachers can only view applications for their own opportunities', 403);
+  }
+
+  const applications = await OpportunityApplication.find({
+    schoolId,
+    opportunityId: opportunity._id
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return sendSuccess(res, 'Opportunity applications fetched successfully', {
+    opportunityId: opportunity._id,
+    title: opportunity.title,
+    count: applications.length,
+    applications
   });
 });

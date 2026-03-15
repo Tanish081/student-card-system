@@ -31,14 +31,6 @@ const splitInput = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const fileToDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
-    reader.readAsDataURL(file);
-  });
-
 const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship = true }) => {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
@@ -59,36 +51,40 @@ const OpportunityCreateForm = ({ heading = 'Post Opportunity', allowScholarship 
     setLoading(true);
 
     try {
-      const attachments = await Promise.all(
-        selectedFiles.map(async (file) => {
-          if (!ALLOWED_FILE_TYPES.has(file.type)) {
-            throw new Error(`Unsupported file type for ${file.name}`);
-          }
+      selectedFiles.forEach((file) => {
+        if (!ALLOWED_FILE_TYPES.has(file.type)) {
+          throw new Error(`Unsupported file type for ${file.name}`);
+        }
 
-          const sizeKB = Math.round(file.size / 1024);
-          if (sizeKB > MAX_FILE_SIZE_KB) {
-            throw new Error(`${file.name} exceeds ${MAX_FILE_SIZE_KB} KB`);
-          }
+        const sizeKB = Math.round(file.size / 1024);
+        if (sizeKB > MAX_FILE_SIZE_KB) {
+          throw new Error(`${file.name} exceeds ${MAX_FILE_SIZE_KB} KB`);
+        }
+      });
 
-          return {
-            fileName: file.name,
-            mimeType: file.type,
-            dataUrl: await fileToDataUrl(file),
-            sizeKB
-          };
-        })
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('description', form.description);
+      formData.append('eventType', form.eventType);
+      formData.append('category', form.category);
+      formData.append('skillTags', splitInput(form.skillTagsInput).join(','));
+      formData.append(
+        'eligibleClasses',
+        splitInput(form.eligibleClassesInput)
+          .map((item) => item.toUpperCase())
+          .join(',')
       );
+      formData.append('minSPI', String(Number(form.minSPI || 0)));
+      formData.append('deadline', form.deadline);
 
-      await api.post('/opportunities', {
-        title: form.title,
-        description: form.description,
-        eventType: form.eventType,
-        category: form.category,
-        skillTags: splitInput(form.skillTagsInput),
-        eligibleClasses: splitInput(form.eligibleClassesInput).map((item) => item.toUpperCase()),
-        minSPI: Number(form.minSPI || 0),
-        deadline: form.deadline,
-        attachments
+      selectedFiles.forEach((file) => {
+        formData.append('attachments', file);
+      });
+
+      await api.post('/opportunities', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       setForm(initialForm);

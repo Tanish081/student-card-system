@@ -4,6 +4,7 @@ import {
   addGuidance,
   getMyAssignments,
   getMyStudents,
+  searchMyStudentsByUIDPrefix,
   getTeacherRoleMappings,
   getStudentAcademicRecords,
   updateAcademicRecord
@@ -17,6 +18,7 @@ router.use(protect);
 
 router.get('/me/assignments', authorizeRoles('teacher'), getMyAssignments);
 router.get('/me/students', authorizeRoles('teacher'), getMyStudents);
+router.get('/me/students/search', authorizeRoles('teacher'), searchMyStudentsByUIDPrefix);
 router.get('/roles/:teacherID', authorizeRoles('admin', 'teacher'), getTeacherRoleMappings);
 router.post('/academic-records', authorizeRoles('teacher'), addAcademicRecord);
 router.patch('/academic-records/:recordId', authorizeRoles('teacher'), updateAcademicRecord);

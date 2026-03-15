@@ -14,6 +14,8 @@ const TeacherDashboard = () => {
   const [classRanking, setClassRanking] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [uidPrefix, setUidPrefix] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
   const [guidanceForm, setGuidanceForm] = useState({ studentUID: '', message: '' });
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -24,10 +26,45 @@ const TeacherDashboard = () => {
   );
 
   const filteredStudents = useMemo(() => {
-    const query = uidPrefix.trim().toUpperCase();
-    if (!query) return students;
-    return students.filter((student) => String(student.uid || '').toUpperCase().startsWith(query));
-  }, [students, uidPrefix]);
+    if (!uidPrefix.trim()) return students;
+    return searchResults;
+  }, [students, uidPrefix, searchResults]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const runSearch = async () => {
+      const query = uidPrefix.trim().toUpperCase();
+      if (!query) {
+        setSearchResults([]);
+        setSearchLoading(false);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const response = await api.get('/teachers/me/students/search', {
+          params: { uidPrefix: query }
+        });
+
+        if (!isCancelled) {
+          setSearchResults(response.data.data.students || []);
+        }
+      } catch (apiError) {
+        if (!isCancelled) {
+          setError(apiError?.response?.data?.message || 'Failed to search students by UID prefix');
+        }
+      } finally {
+        if (!isCancelled) setSearchLoading(false);
+      }
+    };
+
+    runSearch();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [uidPrefix]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -164,6 +201,7 @@ const TeacherDashboard = () => {
                 onChange={(event) => setUidPrefix(event.target.value.toUpperCase())}
                 placeholder="e.g. RAHU"
               />
+              {searchLoading ? <p style={{ margin: '0.35rem 0 0', color: '#64748b' }}>Searching...</p> : null}
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="table">

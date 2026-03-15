@@ -104,7 +104,7 @@ const LoginPage = () => {
           display: 'flex',
           alignItems: 'stretch',
           width: '100%',
-          maxWidth: '900px',
+          maxWidth: '820px',
           minHeight: '560px',
           borderRadius: '24px',
           overflow: 'hidden',
@@ -115,29 +115,33 @@ const LoginPage = () => {
       >
         {/* Left: Image panel */}
         <div className="login-image-panel" style={{
-          flex: 1,
+          width: '340px',
+          flexShrink: 0,
           position: 'relative',
-          minWidth: 0,
           overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(circle at 20% 20%, rgba(124,58,237,0.22), rgba(7,9,22,0.8) 65%), #0b1022',
         }}>
           <img
             src="/login.png"
             alt="School campus"
             style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
+              width: 'min(88%, 320px)',
+              height: 'auto',
+              objectFit: 'contain',
               objectPosition: 'center',
+              borderRadius: '16px',
+              boxShadow: '0 20px 45px rgba(0,0,0,0.5)',
             }}
           />
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(7,9,22,0.88) 0%, rgba(7,9,22,0.15) 55%, transparent 100%)',
+            background: 'linear-gradient(to top, rgba(7,9,22,0.6) 0%, transparent 55%)',
           }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '2rem', color: '#fff' }}>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.4rem 1.6rem', color: '#fff' }}>
             <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>
               Empowering every learner
             </p>

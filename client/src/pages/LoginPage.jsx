@@ -126,22 +126,48 @@ const LoginPage = () => {
         }}>
           <img
             src="/login.png"
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: '-8%',
+              width: '116%',
+              height: '116%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              filter: 'blur(18px) saturate(0.9) brightness(0.55)',
+              transform: 'scale(1.08)',
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(7,9,22,0.2) 0%, rgba(7,9,22,0.28) 45%, rgba(7,9,22,0.72) 100%)',
+            }}
+          />
+          <img
+            src="/login.png"
             alt="School campus"
             style={{
-              width: 'min(88%, 320px)',
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(92%, 325px)',
               height: 'auto',
               objectFit: 'contain',
               objectPosition: 'center',
               borderRadius: '16px',
               boxShadow: '0 20px 45px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.12)',
             }}
           />
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(7,9,22,0.6) 0%, transparent 55%)',
+            background: 'linear-gradient(to top, rgba(7,9,22,0.42) 0%, transparent 42%)',
           }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.4rem 1.6rem', color: '#fff' }}>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.4rem 1.6rem', color: '#fff', zIndex: 2 }}>
             <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>
               Empowering every learner
             </p>

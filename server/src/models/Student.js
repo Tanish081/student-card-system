@@ -84,6 +84,10 @@ const studentSchema = new mongoose.Schema(
       default: null,
       trim: true
     },
+    interests: {
+      type: [String],
+      default: []
+    },
     aadhaarHash: {
       type: String,
       default: null

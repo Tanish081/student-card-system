@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import OpportunityCreateForm from '../components/OpportunityCreateForm';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -314,6 +315,10 @@ const AdminDashboard = () => {
               </div>
             </section>
           </div>
+
+          <section style={{ marginTop: '1rem' }}>
+            <OpportunityCreateForm heading="Post Opportunity (Admin)" />
+          </section>
         </main>
       </div>
     </div>

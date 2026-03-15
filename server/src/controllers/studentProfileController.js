@@ -6,6 +6,18 @@ import { logAuditAction } from '../services/auditService.js';
 
 const requiredFields = ['parentName', 'parentContact', 'address', 'city', 'state', 'pincode'];
 
+const normalizeInterests = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim().toLowerCase()).filter(Boolean);
+  }
+
+  return String(value)
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+};
+
 export const completeStudentProfile = asyncHandler(async (req, res) => {
   if (req.user.role !== 'student') {
     return sendError(res, 'Only students can complete profile', 403);
@@ -34,7 +46,8 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     parentContact,
     familyIncome,
     category,
-    aadhaar
+    aadhaar,
+    interests
   } = req.body;
 
   student.fullName = student.name;
@@ -48,6 +61,9 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   student.parentContact = parentContact;
   student.familyIncome = familyIncome !== undefined ? Number(familyIncome) : student.familyIncome;
   student.category = category || student.category || null;
+  if (interests !== undefined) {
+    student.interests = normalizeInterests(interests);
+  }
 
   if (aadhaar) {
     student.aadhaarHash = await bcrypt.hash(String(aadhaar), 10);

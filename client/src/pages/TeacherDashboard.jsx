@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ClassList from '../components/ClassList';
+import OpportunityCreateForm from '../components/OpportunityCreateForm';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -180,6 +181,10 @@ const TeacherDashboard = () => {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section style={{ marginTop: '1rem' }}>
+            <OpportunityCreateForm heading="Post Opportunity (Teacher)" allowScholarship={false} />
           </section>
         </main>
       </div>

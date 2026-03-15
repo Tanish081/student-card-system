@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import StudentCard from '../components/StudentCard';
 import AchievementTable from '../components/AchievementTable';
 import SPIGraph from '../components/SPIGraph';
+import OpportunityFeed from '../components/OpportunityFeed';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -95,6 +96,8 @@ const StudentDashboard = () => {
                   <p>No participation entries yet.</p>
                 )}
               </section>
+
+              <OpportunityFeed />
             </>
           ) : (
             !error && <p>Loading dashboard...</p>

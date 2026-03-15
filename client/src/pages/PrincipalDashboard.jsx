@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import OpportunityCreateForm from '../components/OpportunityCreateForm';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -18,6 +19,7 @@ const PrincipalDashboard = () => {
         setError(apiError?.response?.data?.message || 'Failed to load analytics');
       }
     };
+
 
     fetchAnalytics();
   }, []);
@@ -108,6 +110,9 @@ const PrincipalDashboard = () => {
                   <p>No students currently under support threshold.</p>
                 )}
               </section>
+                <section style={{ marginTop: '1rem' }}>
+                  <OpportunityCreateForm heading="Post Opportunity (Principal)" />
+                </section>
             </>
           )}
         </main>

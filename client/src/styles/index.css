@@ -688,3 +688,56 @@ textarea {
     height: 100px;
   }
 }
+
+.page-loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
+  background: #080c14;
+  color: #b8c6d6;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.page-loader-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 212, 180, 0.2);
+  border-top-color: #00d4b4;
+  animation: spin 1s linear infinite;
+}
+
+.unauthorized-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top right, rgba(0, 212, 180, 0.14), transparent 46%), #080c14;
+  color: #d7e0ec;
+}
+
+.unauthorized-card {
+  width: min(440px, calc(100vw - 2rem));
+  background: #0d1524;
+  border: 1px solid rgba(0, 212, 180, 0.2);
+  border-radius: 14px;
+  padding: 1.4rem;
+  text-align: center;
+}
+
+.unauthorized-card h1 {
+  margin: 0;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.6rem;
+}
+
+.unauthorized-card p {
+  margin: 0.7rem 0 1rem;
+  color: #8a9bb0;
+}
+
+.unauthorized-card button {
+  background: #00d4b4;
+  color: #081114;
+  font-weight: 700;
+}

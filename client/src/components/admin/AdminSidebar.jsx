@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react';
+
 const ICONS = {
   overview: (
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v4h-7zm0 6h7v10h-7zM4 13h7v7H4z" fill="currentColor" /></svg>
@@ -36,7 +38,23 @@ const LogoMark = () => (
   </svg>
 );
 
-const AdminSidebar = ({ items, activeItem, onSelect, badges = {}, compact = false }) => {
+const AdminSidebar = ({ items, activeSection, onNavigate, badges = {}, compact = false }) => {
+  const [tooltipKey, setTooltipKey] = useState('');
+  const tooltipTimerRef = useRef(null);
+
+  const handleEnter = (key) => {
+    if (!compact) return;
+    clearTimeout(tooltipTimerRef.current);
+    tooltipTimerRef.current = setTimeout(() => {
+      setTooltipKey(key);
+    }, 200);
+  };
+
+  const handleLeave = () => {
+    clearTimeout(tooltipTimerRef.current);
+    setTooltipKey('');
+  };
+
   return (
     <aside className={`admin-sidebar ${compact ? 'is-compact' : ''}`}>
       <div>
@@ -55,13 +73,15 @@ const AdminSidebar = ({ items, activeItem, onSelect, badges = {}, compact = fals
             <button
               type="button"
               key={item.key}
-              className={`admin-nav-item ${activeItem === item.key ? 'is-active' : ''}`}
-              onClick={() => onSelect(item.key)}
-              title={compact ? item.label : undefined}
+              className={`admin-nav-item ${activeSection === item.key ? 'is-active' : ''}`}
+              onClick={() => onNavigate(item.key)}
+              onMouseEnter={() => handleEnter(item.key)}
+              onMouseLeave={handleLeave}
             >
               <span className="admin-nav-icon">{ICONS[item.icon] || ICONS.overview}</span>
               {!compact ? <span className="admin-nav-label">{item.label}</span> : null}
               {!compact && badges[item.key] ? <span className="admin-nav-badge">{badges[item.key]}</span> : null}
+              {compact && tooltipKey === item.key ? <span className="admin-nav-tooltip">{item.label}</span> : null}
             </button>
           ))}
         </nav>

@@ -142,3 +142,31 @@ export const login = asyncHandler(async (req, res) => {
     }
   });
 });
+
+export const getMe = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  let profileCompletionRequired = false;
+  if (user.role === ROLES.STUDENT && user.linkedStudentUID) {
+    const student = await Student.findOne({
+      schoolId: user.schoolId,
+      uid: user.linkedStudentUID
+    })
+      .select('profileCompleted')
+      .lean();
+
+    profileCompletionRequired = !student?.profileCompleted;
+  }
+
+  return sendSuccess(res, 'User profile fetched successfully', {
+    profileCompletionRequired,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      linkedTeacherID: user.linkedTeacherID,
+      linkedStudentUID: user.linkedStudentUID
+    }
+  });
+});

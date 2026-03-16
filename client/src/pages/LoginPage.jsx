@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const ROLES = ['student', 'teacher', 'principal', 'admin'];
@@ -283,6 +283,10 @@ const LoginPage = () => {
             <button type="button" className="login-forgot-link">
               Forgot password?
             </button>
+
+            <p style={{ margin: '0.7rem 0 0', textAlign: 'center', fontSize: '0.75rem', color: '#8a9bb0' }}>
+              Admin or Principal? <Link to="/admin-login" style={{ color: '#f4a623' }}>Use command access</Link>
+            </p>
           </form>
         </div>
       </section>

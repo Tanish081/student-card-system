@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "install:all": "npm --prefix server install && npm --prefix client install",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
@@ -10,5 +11,8 @@
     "seed": "npm --prefix server run seed",
     "generate:testdata": "npm --prefix server run generate:testdata",
     "test:edge": "npm --prefix server run test:edge"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

@@ -1,0 +1,178 @@
+@keyframes dashboardPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes dashboardToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-empty-state {
+  border: 1px dashed rgba(138, 155, 176, 0.35);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.dashboard-empty-state h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dashboard-empty-state p {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+}
+
+.dashboard-empty-state.small {
+  padding: 0.8rem;
+}
+
+.dashboard-empty-inline {
+  color: #8a9bb0;
+  font-size: 0.76rem;
+  padding: 0.4rem 0;
+}
+
+.dashboard-toast {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  z-index: 130;
+  min-width: 250px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #111d30;
+  color: #e8edf5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.8rem;
+  animation: dashboardToastIn 220ms ease-out;
+}
+
+.dashboard-toast.success {
+  border-color: rgba(46, 213, 115, 0.35);
+}
+
+.dashboard-toast.error {
+  border-color: rgba(255, 71, 87, 0.45);
+}
+
+.dashboard-toast.info {
+  border-color: rgba(11, 123, 110, 0.45);
+}
+
+.dashboard-toast button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.dashboard-notification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(8, 12, 20, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.dashboard-notification-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dashboard-notification-panel {
+  width: 360px;
+  max-width: 92vw;
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 120;
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.dashboard-notification-panel.is-open {
+  transform: translateX(0);
+}
+
+.dashboard-notification-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.dashboard-notification-panel header h3 {
+  margin: 0;
+}
+
+.dashboard-notification-panel header div {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.dashboard-notification-panel header button {
+  border-radius: 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.dashboard-notification-group {
+  margin-bottom: 0.8rem;
+}
+
+.dashboard-notification-group h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dashboard-notification-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  margin-bottom: 0.45rem;
+  padding: 0.6rem;
+  cursor: pointer;
+}
+
+.dashboard-notification-item p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.dashboard-notification-item span {
+  display: block;
+  margin-top: 0.24rem;
+  font-size: 0.65rem;
+}
+
+.dashboard-notification-item.is-unread {
+  font-weight: 600;
+}

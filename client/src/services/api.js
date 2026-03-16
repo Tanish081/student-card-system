@@ -1,7 +1,20 @@
 import axios from 'axios';
 
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+  if (!rawBaseUrl || !String(rawBaseUrl).trim()) {
+    return 'http://localhost:5000/api';
+  }
+
+  const cleaned = String(rawBaseUrl).trim().replace(/\/+$/, '');
+  if (cleaned.endsWith('/api')) {
+    return cleaned;
+  }
+
+  return `${cleaned}/api`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+  baseURL: normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 });
 
 const cache = new Map();

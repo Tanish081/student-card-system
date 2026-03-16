@@ -88,6 +88,53 @@ const studentSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    pointsBreakdown: {
+      academics: {
+        score: { type: Number, default: 0 },
+        maxScore: { type: Number, default: 400 },
+        lastUpdated: { type: Date, default: null }
+      },
+      achievements: {
+        score: { type: Number, default: 0 },
+        maxScore: { type: Number, default: 300 },
+        lastUpdated: { type: Date, default: null }
+      },
+      participation: {
+        score: { type: Number, default: 0 },
+        maxScore: { type: Number, default: 200 },
+        lastUpdated: { type: Date, default: null }
+      },
+      opportunities: {
+        score: { type: Number, default: 0 },
+        maxScore: { type: Number, default: 100 },
+        lastUpdated: { type: Date, default: null }
+      }
+    },
+    spiTotal: {
+      type: Number,
+      default: 0,
+      index: true
+    },
+    spiPercentile: {
+      type: Number,
+      default: 0
+    },
+    eligibilityFlags: {
+      type: [
+        {
+          schemeId: { type: String, default: null },
+          schemeName: { type: String, default: null },
+          eligible: { type: Boolean, default: false },
+          reason: { type: String, default: null },
+          recommendation: { type: String, default: null },
+          requiredSPI: { type: Number, default: 0 },
+          currentSPI: { type: Number, default: 0 },
+          progressPercent: { type: Number, default: 0 },
+          portalUrl: { type: String, default: null }
+        }
+      ],
+      default: []
+    },
     aadhaarHash: {
       type: String,
       default: null

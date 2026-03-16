@@ -1,322 +1,291 @@
-import { useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-const LABEL = {
-  display: 'block',
-  fontSize: '0.73rem',
-  fontWeight: 600,
-  color: 'rgba(255,255,255,0.45)',
-  letterSpacing: '0.09em',
-  textTransform: 'uppercase',
-  marginBottom: '7px',
+const ROLES = ['student', 'teacher', 'principal', 'admin'];
+
+const TAGLINES = {
+  student: 'Your achievements. Verified. Permanent.',
+  teacher: 'Guide growth. Verify truth. Shape futures.',
+  principal: 'Institutional trust with verifiable records.',
+  admin: 'Secure governance for every student identity.'
 };
 
-const FIELD_BASE = {
-  width: '100%',
-  padding: '11px 14px',
-  borderRadius: '10px',
-  color: '#e2e8f0',
-  fontSize: '0.93rem',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
-  fontFamily: 'inherit',
+const STATUS_PILLS = ['Verified Records', 'SPI Score', 'Scheme Eligible'];
+
+const INPUT_ICONS = {
+  email: '🪪',
+  password: '🔒'
 };
+
+const LOGO_SVG = (
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <rect x="8" y="8" width="104" height="104" rx="12" className="login-logo-stroke" />
+    <rect x="20" y="20" width="16" height="16" className="login-logo-fill" />
+    <rect x="84" y="20" width="16" height="16" className="login-logo-fill" />
+    <rect x="20" y="84" width="16" height="16" className="login-logo-fill" />
+    <rect x="84" y="84" width="16" height="16" className="login-logo-fill" />
+    <rect x="50" y="20" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="62" y="20" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="20" y="50" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="20" y="62" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="92" y="50" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="92" y="62" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="50" y="92" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="62" y="92" width="8" height="8" className="login-logo-fill-muted" />
+    <rect x="50" y="50" width="20" height="20" className="login-logo-fill" />
+  </svg>
+);
+
+const Spinner = () => <span className="login-spinner" aria-hidden="true" />;
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, loading, logout } = useAuth();
-  const cardRef = useRef(null);
+  const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+  const resetPulseRef = useRef(null);
 
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [selectedRole, setSelectedRole] = useState('admin');
+  const [selectedRole, setSelectedRole] = useState('student');
   const [error, setError] = useState('');
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [focusedField, setFocusedField] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [hoverNetwork, setHoverNetwork] = useState(false);
+  const [logoPulse, setLogoPulse] = useState(false);
+  const [submitState, setSubmitState] = useState('idle');
+  const [shakeCard, setShakeCard] = useState(false);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
-    const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
-    setTilt({ x: dy * 5, y: -dx * 5 });
-  }, []);
+  const roleIndex = useMemo(() => ROLES.indexOf(selectedRole), [selectedRole]);
 
-  const handleMouseLeave = useCallback(() => setTilt({ x: 0, y: 0 }), []);
+  useEffect(
+    () => () => {
+      if (resetPulseRef.current) clearTimeout(resetPulseRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    },
+    []
+  );
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+
+    const particleCount = 60;
+    const nodes = [];
+
+    const resize = () => {
+      const { clientWidth, clientHeight } = canvas;
+      canvas.width = clientWidth;
+      canvas.height = clientHeight;
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < particleCount; i += 1) {
+      nodes.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.42,
+        vy: (Math.random() - 0.5) * 0.42,
+        r: 3 + Math.random() * 2,
+        c: Math.random() > 0.5
+          ? 'rgba(255,107,53,0.6)'
+          : 'rgba(244,166,35,0.42)'
+      });
+    }
+
+    const draw = () => {
+      const distLimit = hoverNetwork ? 160 : 120;
+      const glowMul = hoverNetwork ? 1.15 : 1;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < nodes.length; i += 1) {
+        const node = nodes[i];
+        node.x += node.vx;
+        node.y += node.vy;
+
+        if (node.x < node.r || node.x > canvas.width - node.r) node.vx *= -1;
+        if (node.y < node.r || node.y > canvas.height - node.r) node.vy *= -1;
+
+        for (let j = i + 1; j < nodes.length; j += 1) {
+          const next = nodes[j];
+          const dx = node.x - next.x;
+          const dy = node.y - next.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= distLimit) {
+            const opacity = ((distLimit - dist) / distLimit) * 0.32 * glowMul;
+            ctx.beginPath();
+            ctx.moveTo(node.x, node.y);
+            ctx.lineTo(next.x, next.y);
+            ctx.strokeStyle = `rgba(255,107,53,${opacity.toFixed(3)})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+        ctx.fillStyle = node.c;
+        ctx.fill();
+      }
+
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [hoverNetwork]);
+
+  const triggerLogoPulse = () => {
+    setLogoPulse(true);
+    if (resetPulseRef.current) clearTimeout(resetPulseRef.current);
+    resetPulseRef.current = setTimeout(() => setLogoPulse(false), 320);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleChange = (event) => {
+    setFormData((prev) => ({ ...prev, [event.target.name]: event.target.value }));
+    if (event.target.name === 'email') triggerLogoPulse();
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
+    setSubmitState('loading');
     try {
       const user = await login(formData.email, formData.password);
+
       if (selectedRole && user.role !== selectedRole) {
         logout();
         setError(`Role mismatch: you selected "${selectedRole}" but this account is "${user.role}".`);
+        setSubmitState('idle');
+        setShakeCard(true);
+        setTimeout(() => setShakeCard(false), 360);
         return;
       }
-      navigate(`/${user.role}`);
+
+      setSubmitState('success');
+      setTimeout(() => navigate(`/${user.role}`), 350);
     } catch (err) {
       setError(err?.response?.data?.message || 'Login failed. Please try again.');
+      setSubmitState('idle');
+      setShakeCard(true);
+      setTimeout(() => setShakeCard(false), 360);
     }
   };
 
-  const fieldStyle = (name) => ({
-    ...FIELD_BASE,
-    border: focusedField === name
-      ? '1px solid rgba(167,139,250,0.7)'
-      : '1px solid rgba(255,255,255,0.09)',
-    background: focusedField === name
-      ? 'rgba(139,92,246,0.12)'
-      : 'rgba(255,255,255,0.05)',
-    boxShadow: focusedField === name
-      ? '0 0 0 3px rgba(139,92,246,0.18)'
-      : 'none',
-  });
-
   return (
-    <div
-      className="login-bg"
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        fontFamily: "'Inter', 'Poppins', system-ui, sans-serif",
-      }}
-    >
-      {/* Aurora blobs */}
-      <div aria-hidden="true" className="aurora-blob aurora-1" />
-      <div aria-hidden="true" className="aurora-blob aurora-2" />
-      <div aria-hidden="true" className="aurora-blob aurora-3" />
-
-      {/* Split container */}
-      <div
-        className="login-shell"
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'stretch',
-          width: '100%',
-          maxWidth: '820px',
-          minHeight: '560px',
-          borderRadius: '24px',
-          overflow: 'hidden',
-          boxShadow: '0 25px 80px rgba(0,0,0,0.65)',
-          margin: '1rem',
-          border: '1px solid rgba(255,255,255,0.07)',
-        }}
+    <div className="login-civic-root">
+      <section
+        className="login-civic-left"
+        onMouseEnter={() => setHoverNetwork(true)}
+        onMouseLeave={() => setHoverNetwork(false)}
       >
-        <div aria-hidden="true" className="login-surface-texture" />
+        <canvas ref={canvasRef} className="login-network-canvas" />
+        <div className="login-hex-overlay" aria-hidden="true" />
 
-        {/* Left: Image panel */}
-        <div className="login-image-panel" style={{
-          width: '340px',
-          flexShrink: 0,
-          position: 'relative',
-          zIndex: 2,
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'radial-gradient(circle at 20% 20%, rgba(124,58,237,0.22), rgba(7,9,22,0.8) 65%), #0b1022',
-        }}>
-          <img
-            src="/login.png"
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: '-8%',
-              width: '116%',
-              height: '116%',
-              objectFit: 'cover',
-              objectPosition: 'center',
-              filter: 'blur(18px) saturate(0.9) brightness(0.55)',
-              transform: 'scale(1.08)',
-            }}
-          />
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(180deg, rgba(7,9,22,0.2) 0%, rgba(7,9,22,0.28) 45%, rgba(7,9,22,0.72) 100%)',
-            }}
-          />
-          <img
-            src="/login.png"
-            alt="School campus"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: 'min(92%, 325px)',
-              height: 'auto',
-              objectFit: 'contain',
-              objectPosition: 'center',
-              borderRadius: '16px',
-              boxShadow: '0 20px 45px rgba(0,0,0,0.5)',
-              border: '1px solid rgba(255,255,255,0.12)',
-            }}
-          />
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to top, rgba(7,9,22,0.42) 0%, transparent 42%)',
-          }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.4rem 1.6rem', color: '#fff', zIndex: 2 }}>
-            <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>
-              Empowering every learner
-            </p>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.42)' }}>
-              School Student Performance System
-            </p>
+        <div className="login-brand-layer">
+          <div className={`login-qr-mark ${logoPulse ? 'is-pulse' : ''}`}>{LOGO_SVG}</div>
+          <h1 className="login-brand-name">StudentID</h1>
+          <p className="login-brand-tagline">{TAGLINES[selectedRole]}</p>
+
+          <div className="login-pill-row">
+            {STATUS_PILLS.map((item) => (
+              <span key={item} className="login-status-pill">
+                {item}
+              </span>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Right: Form panel */}
-        <div
-          ref={cardRef}
-          className="login-form-panel"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          style={{
-            position: 'relative',
-            zIndex: 2,
-            width: '380px',
-            flexShrink: 0,
-            background: 'rgba(10,12,30,0.94)',
-            backdropFilter: 'blur(28px)',
-            WebkitBackdropFilter: 'blur(28px)',
-            borderLeft: '1px solid rgba(255,255,255,0.07)',
-            padding: '2.8rem 2.2rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            color: '#fff',
-            transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-            transition: 'transform 0.15s ease-out',
-          }}
-        >
-          <div style={{ marginBottom: '2rem' }}>
-            <p style={{ margin: '0 0 0.9rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-              Student Performance Portal
-            </p>
-            <h1 style={{ margin: '0 0 0.45rem', fontSize: '2.05rem', fontWeight: 700, lineHeight: 1.02, letterSpacing: '-0.04em', color: '#f8fafc' }}>
-              Student SPI
-            </h1>
-            <p style={{ margin: '0 0 1.2rem', fontSize: '0.9rem', color: 'rgba(196,181,253,0.82)', fontWeight: 600, letterSpacing: '0.04em' }}>
-              Access • Records • Achievement
-            </p>
-            <p style={{ margin: 0, fontSize: '0.84rem', color: 'rgba(255,255,255,0.34)', lineHeight: 1.7, maxWidth: '280px' }}>
-              Sign in to continue to your dashboard and manage performance insights securely.
-            </p>
+      <section className="login-civic-right">
+        <div className={`login-civic-card ${shakeCard ? 'is-shake' : ''}`}>
+          <h2 className="login-form-title">Civic Student Identity</h2>
+          <p className="login-form-subtitle">Trusted access to verified educational records</p>
+
+          <div className="login-role-tabs" role="tablist" aria-label="Select role">
+            <div className="login-role-indicator" style={{ transform: `translateX(${roleIndex * 100}%)` }} />
+            {ROLES.map((role) => (
+              <button
+                type="button"
+                key={role}
+                className={`login-role-tab ${selectedRole === role ? 'is-active' : ''}`}
+                onClick={() => setSelectedRole(role)}
+              >
+                {role}
+              </button>
+            ))}
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-            <div>
-              <label style={LABEL}>Role</label>
-              <select
-                name="role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                onFocus={() => setFocusedField('role')}
-                onBlur={() => setFocusedField(null)}
-                style={{ ...fieldStyle('role'), cursor: 'pointer' }}
-              >
-                <option value="admin" style={{ background: '#0a0c1e' }}>Admin</option>
-                <option value="principal" style={{ background: '#0a0c1e' }}>Principal</option>
-                <option value="teacher" style={{ background: '#0a0c1e' }}>Teacher</option>
-                <option value="student" style={{ background: '#0a0c1e' }}>Student</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={LABEL}>Email</label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                onFocus={() => setFocusedField('email')}
-                onBlur={() => setFocusedField(null)}
-                required
-                placeholder="you@school.edu"
-                style={fieldStyle('email')}
-              />
-            </div>
-
-            <div>
-              <label style={LABEL}>Password</label>
-              <input
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                required
-                placeholder="••••••••"
-                style={fieldStyle('password')}
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: '10px',
-                background: 'rgba(239,68,68,0.12)',
-                border: '1px solid rgba(239,68,68,0.28)',
-                color: '#fca5a5',
-                fontSize: '0.85rem',
-                lineHeight: 1.5,
-              }}>
-                {error}
+          <form onSubmit={handleSubmit} className="login-civic-form">
+            <label htmlFor="login-uid-email" className="login-field-wrap">
+              <span className="login-field-label">UID / Email</span>
+              <div className={`login-input-shell ${focusedField === 'email' ? 'is-focused' : ''}`}>
+                <span className="login-input-icon" aria-hidden="true">{INPUT_ICONS.email}</span>
+                <input
+                  id="login-uid-email"
+                  name="email"
+                  type="text"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter UID or email"
+                  required
+                />
               </div>
-            )}
+            </label>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                padding: '13px',
-                borderRadius: '12px',
-                background: loading
-                  ? 'rgba(124,58,237,0.3)'
-                  : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                color: '#fff',
-                border: 'none',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                letterSpacing: '0.02em',
-                boxShadow: loading ? 'none' : '0 4px 22px rgba(124,58,237,0.5)',
-                transition: 'all 0.2s ease',
-                marginTop: '0.3rem',
-              }}
-            >
-              {loading ? 'Signing in…' : 'Sign in →'}
+            <label htmlFor="login-password" className="login-field-wrap">
+              <span className="login-field-label">Password</span>
+              <div className={`login-input-shell ${focusedField === 'password' ? 'is-focused' : ''}`}>
+                <span className="login-input-icon" aria-hidden="true">{INPUT_ICONS.password}</span>
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="login-eye-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? '🙈' : '👁'}
+                </button>
+              </div>
+            </label>
+
+            {error ? <p className="login-error-text">{error}</p> : null}
+
+            <button type="submit" className="login-submit-btn" disabled={loading || submitState === 'success'}>
+              <span className="login-btn-shimmer" aria-hidden="true" />
+              {submitState === 'loading' ? (
+                <span className="login-submit-state"><Spinner /> Validating...</span>
+              ) : null}
+              {submitState === 'success' ? <span className="login-submit-state">✓ Verified</span> : null}
+              {submitState === 'idle' ? <span className="login-submit-state">Login Securely</span> : null}
+            </button>
+
+            <button type="button" className="login-forgot-link">
+              Forgot password?
             </button>
           </form>
-
-          <p style={{
-            marginTop: '1.8rem',
-            fontSize: '0.72rem',
-            color: 'rgba(255,255,255,0.22)',
-            textAlign: 'center',
-            letterSpacing: '0.02em',
-          }}>
-            School Student Performance System • v1.0
-          </p>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

@@ -144,9 +144,39 @@ export const getStudentDashboard = asyncHandler(async (req, res) => {
     profile: student,
     uid: student.uid,
     spi: spiBreakdown,
+    eligibility: spiBreakdown.eligibilityFlags || student.eligibilityFlags || [],
     achievements,
     teacherFeedback: guidance,
     participationHistory,
     academicRecords
+  });
+});
+
+export const getStudentEligibility = asyncHandler(async (req, res) => {
+  const { uid } = req.params;
+  const schoolId = req.schoolId;
+
+  const student = await Student.findOne({ uid, schoolId }).lean();
+  if (!student) return sendError(res, 'Student not found', 404);
+
+  if (req.user.role === 'student' && req.user.linkedStudentUID !== uid) {
+    return sendError(res, 'You can only view your own eligibility profile', 403);
+  }
+
+  if (req.user.role === 'teacher') {
+    const allowed = await canTeacherAccessStudent(req.user.linkedTeacherID, student, schoolId);
+    if (!allowed) return sendError(res, 'Teacher is not assigned to this student class', 403);
+  }
+
+  const spi = await computeStudentSPI(uid, schoolId);
+
+  return sendSuccess(res, 'Student eligibility fetched successfully', {
+    uid: student.uid,
+    name: student.name,
+    category: student.category,
+    spiTotal: spi.spiTotal,
+    spiPercentile: spi.spiPercentile,
+    pointsBreakdown: spi.pointsBreakdown,
+    eligibilityFlags: spi.eligibilityFlags || []
   });
 });

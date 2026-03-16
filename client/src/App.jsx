@@ -7,6 +7,7 @@ import PrincipalDashboard from './pages/PrincipalDashboard';
 import StudentProfile from './pages/StudentProfile';
 import AddAchievement from './pages/AddAchievement';
 import VerifyAchievement from './pages/VerifyAchievement';
+import PublicVerifyPage from './pages/PublicVerifyPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -16,6 +17,7 @@ const App = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/verify/:uid" element={<PublicVerifyPage />} />
 
       <Route
         path="/admin"

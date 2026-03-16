@@ -15,14 +15,21 @@ const OpportunityFeed = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const loadFeed = async () => {
+  const loadFeed = async (nextPage = page) => {
     setError('');
     setLoading(true);
 
     try {
-      const response = await api.get('/opportunities/feed');
-      setOpportunities(response.data.data.opportunities || []);
+      const response = await api.get('/opportunities/feed', {
+        params: { page: nextPage, limit: 8 }
+      });
+      const payload = response.data.data || {};
+      setOpportunities(payload.opportunities || []);
+      setPage(payload.page || nextPage);
+      setTotalPages(payload.totalPages || 1);
     } catch (apiError) {
       setError(apiError?.response?.data?.message || 'Failed to load opportunity feed');
     } finally {
@@ -31,7 +38,7 @@ const OpportunityFeed = () => {
   };
 
   useEffect(() => {
-    loadFeed();
+    loadFeed(1);
   }, []);
 
   const handleApply = async (opportunityId) => {
@@ -149,6 +156,30 @@ const OpportunityFeed = () => {
         </div>
       ) : (
         <p style={{ marginTop: '0.9rem' }}>No active opportunities are available for your class right now.</p>
+      )}
+
+      {totalPages > 1 ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => loadFeed(page - 1)}
+            disabled={loading || page <= 1}
+          >
+            Previous
+          </button>
+          <small style={{ color: '#64748b' }}>Page {page} of {totalPages}</small>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => loadFeed(page + 1)}
+            disabled={loading || page >= totalPages}
+          >
+            Next
+          </button>
+        </div>
+      ) : (
+        null
       )}
     </section>
   );

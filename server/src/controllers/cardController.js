@@ -2,7 +2,7 @@ import Student from '../models/Student.js';
 import Achievement from '../models/Achievement.js';
 import ParticipationRecord from '../models/ParticipationRecord.js';
 import { ACHIEVEMENT_STATUS } from '../config/constants.js';
-import { sendError } from '../utils/apiResponse.js';
+import { sendError, sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { computeStudentSPI } from '../services/spiService.js';
 import { generateStudentCardPdf } from '../services/cardService.js';
@@ -81,4 +81,40 @@ export const getStudentQrCode = asyncHandler(async (req, res) => {
 
   res.setHeader('Content-Type', 'image/png');
   res.send(pngBuffer);
+});
+
+export const getDigiLockerExportStub = asyncHandler(async (req, res) => {
+  const { uid } = req.params;
+  const schoolId = req.schoolId;
+
+  ensureViewerAccess(req, uid);
+
+  const student = await Student.findOne({ uid, schoolId }).lean();
+  if (!student) return sendError(res, 'Student not found', 404);
+
+  const spi = await computeStudentSPI(uid, schoolId);
+
+  await logAuditAction({
+    req,
+    action: 'student-digilocker-export-requested',
+    entityType: 'Student',
+    entityId: student._id,
+    metadata: {
+      studentUID: uid
+    }
+  });
+
+  return sendSuccess(res, 'DigiLocker export prepared (stub)', {
+    studentUID: student.uid,
+    name: student.name,
+    class: student.class,
+    section: student.section,
+    spi: spi.spi,
+    spiTotal: spi.spiTotal,
+    // TODO: Integrate official DigiLocker issuer API and signed XML/JSON payload.
+    digilocker: {
+      status: 'stub',
+      message: 'DigiLocker integration is pending. This payload is a preview for future integration.'
+    }
+  });
 });

@@ -13,6 +13,9 @@ import {
 } from '../services/opportunityScoringService.js';
 import { logAuditAction } from '../services/auditService.js';
 import { computeStudentSPI } from '../services/spiService.js';
+import { createOpportunityStatusNotification } from '../services/notificationService.js';
+
+const APPLICATION_STATUSES = ['applied', 'shortlisted', 'selected', 'rejected'];
 
 const normalizeArray = (value = []) => {
   if (!value) return [];
@@ -110,10 +113,30 @@ const fileToAttachmentMetadata = (files = []) =>
   files.map((file) => ({
     fileName: file.originalname,
     mimeType: file.mimetype,
-    fileUrl: `/uploads/opportunities/${file.filename}`,
+    fileUrl: file.path || file.secure_url || null,
     dataUrl: null,
     sizeKB: Math.round((Number(file.size || 0) / 1024) * 100) / 100
   }));
+
+const assertOpportunityManagerAccess = (opportunity, req) => {
+  if (req.user.role === 'teacher' && String(opportunity.postedBy) !== String(req.user._id)) {
+    const error = new Error('Teachers can only manage applications for their own opportunities');
+    error.statusCode = 403;
+    throw error;
+  }
+};
+
+const serializeApplication = (application) => ({
+  id: application._id,
+  opportunityId: application.opportunityId,
+  studentUID: application.studentUID,
+  studentUserId: application.studentUserId,
+  status: application.status,
+  relevanceScoreSnapshot: application.relevanceScoreSnapshot,
+  successProbabilitySnapshot: application.successProbabilitySnapshot,
+  createdAt: application.createdAt,
+  updatedAt: application.updatedAt
+});
 
 const sanitizeOpportunityPayload = (payload, { isCreate = false } = {}) => {
   const next = {};
@@ -279,12 +302,95 @@ export const createOpportunity = asyncHandler(async (req, res) => {
   return sendSuccess(res, 'Opportunity created successfully', formatOpportunityOutput(opportunity, req), 201);
 });
 
+export const getOpportunitiesForReview = asyncHandler(async (req, res) => {
+  const schoolId = req.schoolId;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+  const status = req.query.status ? String(req.query.status).toLowerCase() : null;
+
+  if (status && !['active', 'expired'].includes(status)) {
+    return sendError(res, 'status must be one of: active, expired', 400);
+  }
+
+  const query = { schoolId };
+  if (status) query.status = status;
+  if (req.user.role === 'teacher') query.postedBy = req.user._id;
+
+  const skip = (page - 1) * limit;
+
+  const [opportunities, total] = await Promise.all([
+    Opportunity.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Opportunity.countDocuments(query)
+  ]);
+
+  const ids = opportunities.map((item) => item._id);
+  const applicationStats = ids.length
+    ? await OpportunityApplication.aggregate([
+      { $match: { schoolId, opportunityId: { $in: ids } } },
+      {
+        $group: {
+          _id: {
+            opportunityId: '$opportunityId',
+            status: '$status'
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ])
+    : [];
+
+  const statsMap = new Map();
+  applicationStats.forEach((item) => {
+    const key = String(item._id.opportunityId);
+    if (!statsMap.has(key)) {
+      statsMap.set(key, {
+        applied: 0,
+        shortlisted: 0,
+        selected: 0,
+        rejected: 0,
+        total: 0
+      });
+    }
+
+    const entry = statsMap.get(key);
+    const statusKey = item._id.status;
+    entry[statusKey] = item.count;
+    entry.total += item.count;
+  });
+
+  const data = opportunities.map((item) =>
+    formatOpportunityOutput(item, req, {
+      applicationSummary: statsMap.get(String(item._id)) || {
+        applied: 0,
+        shortlisted: 0,
+        selected: 0,
+        rejected: 0,
+        total: 0
+      }
+    })
+  );
+
+  return sendSuccess(res, 'Opportunity list fetched successfully', {
+    count: data.length,
+    total,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    opportunities: data
+  });
+});
+
 export const getOpportunityFeed = asyncHandler(async (req, res) => {
   if (req.user.role !== 'student') {
     return sendError(res, 'Only students can view personalized opportunity feed', 403);
   }
 
   const schoolId = req.schoolId;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
   await expireOutdatedOpportunities(schoolId);
 
   const studentUID = req.user.linkedStudentUID;
@@ -320,7 +426,11 @@ export const getOpportunityFeed = asyncHandler(async (req, res) => {
     })
     .sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-  const opportunityIds = scored.map((item) => item.id);
+  const total = scored.length;
+  const start = (page - 1) * limit;
+  const paged = scored.slice(start, start + limit);
+
+  const opportunityIds = paged.map((item) => item.id);
   const myApplications = await OpportunityApplication.find({
     schoolId,
     studentUID,
@@ -333,7 +443,7 @@ export const getOpportunityFeed = asyncHandler(async (req, res) => {
     myApplications.map((item) => [String(item.opportunityId), item.status])
   );
 
-  const enriched = scored.map((item) => ({
+  const enriched = paged.map((item) => ({
     ...item,
     hasApplied: appMap.has(String(item.id)),
     applicationStatus: appMap.get(String(item.id)) || null
@@ -341,6 +451,9 @@ export const getOpportunityFeed = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, 'Opportunity feed fetched successfully', {
     count: enriched.length,
+    total,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
     opportunities: enriched
   });
 });
@@ -581,21 +694,165 @@ export const getOpportunityApplications = asyncHandler(async (req, res) => {
 
   if (!opportunity) return sendError(res, 'Opportunity not found', 404);
 
-  if (req.user.role === 'teacher' && String(opportunity.postedBy) !== String(req.user._id)) {
-    return sendError(res, 'Teachers can only view applications for their own opportunities', 403);
+  assertOpportunityManagerAccess(opportunity, req);
+
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const statusFilter = req.query.status ? String(req.query.status).toLowerCase() : null;
+
+  if (statusFilter && !APPLICATION_STATUSES.includes(statusFilter)) {
+    return sendError(res, `status must be one of: ${APPLICATION_STATUSES.join(', ')}`, 400);
   }
 
-  const applications = await OpportunityApplication.find({
+  const query = {
     schoolId,
     opportunityId: opportunity._id
-  })
+  };
+
+  if (statusFilter) query.status = statusFilter;
+
+  const skip = (page - 1) * limit;
+
+  const [applications, total] = await Promise.all([
+    OpportunityApplication.find(query)
     .sort({ createdAt: -1 })
-    .lean();
+    .skip(skip)
+    .limit(limit)
+    .lean(),
+    OpportunityApplication.countDocuments(query)
+  ]);
 
   return sendSuccess(res, 'Opportunity applications fetched successfully', {
     opportunityId: opportunity._id,
     title: opportunity.title,
     count: applications.length,
-    applications
+    total,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    applications: applications.map(serializeApplication)
+  });
+});
+
+export const updateOpportunityApplicationStatus = asyncHandler(async (req, res) => {
+  const schoolId = req.schoolId;
+  const { id: opportunityId, applicationId } = req.params;
+  const nextStatus = String(req.body?.status || '').toLowerCase();
+
+  if (!mongoose.isValidObjectId(opportunityId) || !mongoose.isValidObjectId(applicationId)) {
+    return sendError(res, 'Invalid opportunity or application id', 400);
+  }
+
+  if (!APPLICATION_STATUSES.includes(nextStatus)) {
+    return sendError(res, `status must be one of: ${APPLICATION_STATUSES.join(', ')}`, 400);
+  }
+
+  const opportunity = await Opportunity.findOne({ _id: opportunityId, schoolId }).select('postedBy title').lean();
+  if (!opportunity) return sendError(res, 'Opportunity not found', 404);
+
+  assertOpportunityManagerAccess(opportunity, req);
+
+  const application = await OpportunityApplication.findOneAndUpdate(
+    {
+      _id: applicationId,
+      schoolId,
+      opportunityId
+    },
+    { $set: { status: nextStatus } },
+    { new: true }
+  ).lean();
+
+  if (!application) return sendError(res, 'Opportunity application not found', 404);
+
+  await createOpportunityStatusNotification({
+    schoolId,
+    studentUID: application.studentUID,
+    opportunity,
+    status: nextStatus
+  });
+
+  await logAuditAction({
+    req,
+    action: 'opportunity-application-status-updated',
+    entityType: 'OpportunityApplication',
+    entityId: application._id,
+    metadata: {
+      opportunityId,
+      studentUID: application.studentUID,
+      status: nextStatus
+    }
+  });
+
+  return sendSuccess(res, 'Application status updated successfully', serializeApplication(application));
+});
+
+export const bulkUpdateOpportunityApplicationStatus = asyncHandler(async (req, res) => {
+  const schoolId = req.schoolId;
+  const { id: opportunityId } = req.params;
+  const nextStatus = String(req.body?.status || '').toLowerCase();
+  const applicationIds = Array.isArray(req.body?.applicationIds) ? req.body.applicationIds : [];
+
+  if (!mongoose.isValidObjectId(opportunityId)) {
+    return sendError(res, 'Invalid opportunity id', 400);
+  }
+
+  if (!APPLICATION_STATUSES.includes(nextStatus)) {
+    return sendError(res, `status must be one of: ${APPLICATION_STATUSES.join(', ')}`, 400);
+  }
+
+  if (!applicationIds.length || applicationIds.some((id) => !mongoose.isValidObjectId(id))) {
+    return sendError(res, 'applicationIds must be a non-empty list of valid ids', 400);
+  }
+
+  const opportunity = await Opportunity.findOne({ _id: opportunityId, schoolId }).select('postedBy title').lean();
+  if (!opportunity) return sendError(res, 'Opportunity not found', 404);
+
+  assertOpportunityManagerAccess(opportunity, req);
+
+  const applications = await OpportunityApplication.find({
+    _id: { $in: applicationIds },
+    schoolId,
+    opportunityId
+  }).lean();
+
+  if (!applications.length) {
+    return sendError(res, 'No matching applications found for this opportunity', 404);
+  }
+
+  await OpportunityApplication.updateMany(
+    {
+      _id: { $in: applications.map((item) => item._id) },
+      schoolId,
+      opportunityId
+    },
+    { $set: { status: nextStatus } }
+  );
+
+  await Promise.all(
+    applications.map((application) =>
+      createOpportunityStatusNotification({
+        schoolId,
+        studentUID: application.studentUID,
+        opportunity,
+        status: nextStatus
+      })
+    )
+  );
+
+  await logAuditAction({
+    req,
+    action: 'opportunity-application-status-bulk-updated',
+    entityType: 'Opportunity',
+    entityId: opportunityId,
+    metadata: {
+      status: nextStatus,
+      applicationCount: applications.length,
+      applicationIds: applications.map((item) => String(item._id))
+    }
+  });
+
+  return sendSuccess(res, 'Application statuses updated successfully', {
+    updatedCount: applications.length,
+    status: nextStatus,
+    applicationIds: applications.map((item) => String(item._id))
   });
 });

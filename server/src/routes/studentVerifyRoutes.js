@@ -4,7 +4,6 @@ import { publicVerifyLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = Router();
 
-router.get('/student/:uid', publicVerifyLimiter, getPublicStudentVerification);
 router.get('/verify/:uid', publicVerifyLimiter, getPublicStudentVerification);
 
 export default router;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import OpportunityCreateForm from '../components/OpportunityCreateForm';
+import OpportunityApplicationsReview from '../components/OpportunityApplicationsReview';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -113,6 +114,8 @@ const PrincipalDashboard = () => {
                 <section style={{ marginTop: '1rem' }}>
                   <OpportunityCreateForm heading="Post Opportunity (Principal)" />
                 </section>
+
+                <OpportunityApplicationsReview />
             </>
           )}
         </main>

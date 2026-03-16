@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createStudent,
   getStudentDashboard,
+  getStudentEligibility,
   getStudentProfile,
   getStudents
 } from '../controllers/studentController.js';
@@ -16,5 +17,6 @@ router.get('/', authorizeRoles('admin', 'teacher'), getStudents);
 router.post('/', authorizeRoles('admin'), createStudent);
 router.get('/:uid', authorizeStudentSelfOrRoles(['admin', 'teacher']), getStudentProfile);
 router.get('/:uid/dashboard', authorizeStudentSelfOrRoles(['admin', 'teacher']), getStudentDashboard);
+router.get('/:uid/eligibility', authorizeStudentSelfOrRoles(['admin', 'teacher']), getStudentEligibility);
 
 export default router;

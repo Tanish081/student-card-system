@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import OpportunityCreateForm from '../components/OpportunityCreateForm';
+import OpportunityApplicationsReview from '../components/OpportunityApplicationsReview';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -319,6 +320,8 @@ const AdminDashboard = () => {
           <section style={{ marginTop: '1rem' }}>
             <OpportunityCreateForm heading="Post Opportunity (Admin)" />
           </section>
+
+          <OpportunityApplicationsReview />
         </main>
       </div>
     </div>

@@ -1,13 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import multer from 'multer';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const opportunitiesDir = path.resolve(__dirname, '../../uploads/opportunities');
-
-fs.mkdirSync(opportunitiesDir, { recursive: true });
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary, { ensureCloudinaryConfigured } from '../config/cloudinary.js';
 
 const allowedMimeTypes = new Set([
   'application/pdf',
@@ -18,17 +11,28 @@ const allowedMimeTypes = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, opportunitiesDir),
-  filename: (_req, file, cb) => {
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (_req, file) => {
     const safeName = String(file.originalname || 'file')
       .replace(/\s+/g, '_')
       .replace(/[^a-zA-Z0-9._-]/g, '');
-    cb(null, `${Date.now()}-${safeName}`);
+
+    return {
+      folder: 'student-platform/opportunities',
+      resource_type: 'auto',
+      public_id: `opportunity-${Date.now()}-${safeName}`
+    };
   }
 });
 
 const fileFilter = (_req, file, cb) => {
+  try {
+    ensureCloudinaryConfigured();
+  } catch (error) {
+    return cb(error);
+  }
+
   if (!allowedMimeTypes.has(file.mimetype)) {
     const error = new Error(`Unsupported file type: ${file.mimetype}`);
     error.statusCode = 400;

@@ -92,7 +92,7 @@ export const generateStudentCardPdf = async ({ student, spi, topAchievements, pa
   doc.image(qrBuffer, cardX + 30, footerY + 25, { fit: [72, 72] });
 
   doc.font('Helvetica').fontSize(10.5).text('Scan QR to verify student record', cardX + 120, footerY + 45);
-  doc.fontSize(9).fillColor('#374151').text('Public endpoint: /api/public/student/:uid', cardX + 120, footerY + 64);
+  doc.fontSize(9).fillColor('#374151').text('Public route: /verify/:uid', cardX + 120, footerY + 64);
 
   doc.fillColor('#111827');
 

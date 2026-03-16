@@ -6,6 +6,9 @@ import StudentCard from '../components/StudentCard';
 import AchievementTable from '../components/AchievementTable';
 import SPIGraph from '../components/SPIGraph';
 import OpportunityFeed from '../components/OpportunityFeed';
+import EligibilityPanel from '../components/EligibilityPanel';
+import StudentIDCard from '../components/StudentIDCard';
+import NotificationsPanel from '../components/NotificationsPanel';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -51,6 +54,10 @@ const StudentDashboard = () => {
                 <StudentCard profile={dashboard.profile} spi={dashboard.spi} />
                 <SPIGraph spi={dashboard.spi} />
               </div>
+
+              <StudentIDCard profile={dashboard.profile} spi={dashboard.spi} />
+
+              <EligibilityPanel uid={dashboard.uid} />
 
               <div style={{ marginTop: '1rem' }}>
                 <AchievementTable achievements={dashboard.achievements} />
@@ -98,6 +105,8 @@ const StudentDashboard = () => {
               </section>
 
               <OpportunityFeed />
+
+              <NotificationsPanel />
             </>
           ) : (
             !error && <p>Loading dashboard...</p>

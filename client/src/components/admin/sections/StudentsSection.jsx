@@ -4,12 +4,31 @@ import { useStudentDetail, useStudentsSection } from '../../../hooks/admin/useSt
 import SectionLoader from '../../shared/SectionLoader';
 import ErrorState from '../../shared/ErrorState';
 import EmptyState from '../../shared/EmptyState';
+import api from '../../../services/api';
 
 const DEFAULT_FILTERS = {
   school: '',
   status: '',
   spiMin: '',
   spiMax: ''
+};
+
+const INITIAL_STUDENT_FORM = {
+  firstName: '',
+  lastName: '',
+  dob: '',
+  className: '',
+  section: '',
+  admissionYear: String(new Date().getFullYear()),
+  email: '',
+  password: ''
+};
+
+const INITIAL_TEACHER_FORM = {
+  teacherID: '',
+  name: '',
+  email: '',
+  password: ''
 };
 
 const StudentsSection = ({ context }) => {
@@ -20,6 +39,12 @@ const StudentsSection = ({ context }) => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [selectedUID, setSelectedUID] = useState('');
   const [drawerTab, setDrawerTab] = useState('profile');
+  const [modalType, setModalType] = useState('');
+  const [studentForm, setStudentForm] = useState(INITIAL_STUDENT_FORM);
+  const [teacherForm, setTeacherForm] = useState(INITIAL_TEACHER_FORM);
+  const [submitError, setSubmitError] = useState('');
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const deferredSearch = useDeferredValue(searchQuery);
 
@@ -72,9 +97,66 @@ const StudentsSection = ({ context }) => {
     URL.revokeObjectURL(url);
   };
 
+  const closeModal = () => {
+    setModalType('');
+    setSubmitError('');
+  };
+
+  const handleCreateRecord = async (event) => {
+    event.preventDefault();
+    setSubmitError('');
+    setSubmitMessage('');
+    setSubmitting(true);
+
+    try {
+      if (modalType === 'student') {
+        await api.post('/admin/create-student', {
+          firstName: studentForm.firstName.trim(),
+          lastName: studentForm.lastName.trim(),
+          dob: studentForm.dob,
+          class: studentForm.className.trim(),
+          section: studentForm.section.trim().toUpperCase(),
+          admissionYear: Number(studentForm.admissionYear),
+          email: studentForm.email.trim(),
+          password: studentForm.password
+        });
+
+        setStudentForm(INITIAL_STUDENT_FORM);
+        setSubmitMessage('Student account created successfully.');
+      }
+
+      if (modalType === 'teacher') {
+        await api.post('/admin/create-teacher', {
+          teacherID: teacherForm.teacherID.trim(),
+          name: teacherForm.name.trim(),
+          email: teacherForm.email.trim(),
+          password: teacherForm.password
+        });
+
+        setTeacherForm(INITIAL_TEACHER_FORM);
+        setSubmitMessage('Teacher account created successfully.');
+      }
+
+      closeModal();
+      refetch();
+    } catch (requestError) {
+      setSubmitError(requestError?.response?.data?.message || 'Failed to create account.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (context?.action === 'export' && rows.length) {
       exportCsv();
+    }
+
+    if (context?.action === 'add-student') {
+      setModalType('student');
+    }
+
+    if (context?.action === 'add-teacher') {
+      setModalType('teacher');
     }
   }, [context?.action, rows.length]);
 
@@ -94,9 +176,14 @@ const StudentsSection = ({ context }) => {
             }}
             placeholder="Search by name or UID"
           />
+          <button type="button" className="secondary" onClick={() => setModalType('student')}>+ Add Student</button>
+          <button type="button" className="secondary" onClick={() => setModalType('teacher')}>+ Add Teacher</button>
           <button type="button" onClick={exportCsv}>Export CSV</button>
         </div>
       </header>
+
+      {submitMessage ? <p className="admin-inline-success">{submitMessage}</p> : null}
+      {submitError ? <p className="admin-inline-error">{submitError}</p> : null}
 
       <div className="filter-row card-muted">
         <select value={filters.school} onChange={(event) => setFilters((prev) => ({ ...prev, school: event.target.value }))}>
@@ -262,6 +349,113 @@ const StudentsSection = ({ context }) => {
                 ) : null}
               </div>
             ) : null}
+          </aside>
+        </div>
+      ) : null}
+
+      {modalType ? (
+        <div className="admin-modal-backdrop" onClick={closeModal}>
+          <aside className="admin-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="admin-modal-head">
+              <h3>{modalType === 'student' ? 'Add Student' : 'Add Teacher'}</h3>
+              <button type="button" className="secondary" onClick={closeModal}>Close</button>
+            </header>
+
+            <form className="admin-modal-form" onSubmit={handleCreateRecord}>
+              {modalType === 'student' ? (
+                <>
+                  <input
+                    placeholder="First Name"
+                    value={studentForm.firstName}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                    required
+                  />
+                  <input
+                    placeholder="Last Name"
+                    value={studentForm.lastName}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="date"
+                    value={studentForm.dob}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, dob: event.target.value }))}
+                    required
+                  />
+                  <input
+                    placeholder="Class (e.g. 9)"
+                    value={studentForm.className}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, className: event.target.value }))}
+                    required
+                  />
+                  <input
+                    placeholder="Section (e.g. A)"
+                    value={studentForm.section}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, section: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Admission Year"
+                    value={studentForm.admissionYear}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, admissionYear: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="email"
+                    placeholder="Student Email"
+                    value={studentForm.email}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, email: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Temporary Password"
+                    value={studentForm.password}
+                    onChange={(event) => setStudentForm((prev) => ({ ...prev, password: event.target.value }))}
+                    required
+                  />
+                </>
+              ) : (
+                <>
+                  <input
+                    placeholder="Teacher ID"
+                    value={teacherForm.teacherID}
+                    onChange={(event) => setTeacherForm((prev) => ({ ...prev, teacherID: event.target.value }))}
+                    required
+                  />
+                  <input
+                    placeholder="Full Name"
+                    value={teacherForm.name}
+                    onChange={(event) => setTeacherForm((prev) => ({ ...prev, name: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="email"
+                    placeholder="Teacher Email"
+                    value={teacherForm.email}
+                    onChange={(event) => setTeacherForm((prev) => ({ ...prev, email: event.target.value }))}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Temporary Password"
+                    value={teacherForm.password}
+                    onChange={(event) => setTeacherForm((prev) => ({ ...prev, password: event.target.value }))}
+                    required
+                  />
+                </>
+              )}
+
+              {submitError ? <p className="admin-inline-error">{submitError}</p> : null}
+
+              <div className="admin-modal-actions">
+                <button type="button" className="secondary" onClick={closeModal}>Cancel</button>
+                <button type="submit" disabled={submitting}>
+                  {submitting ? 'Saving...' : modalType === 'student' ? 'Create Student' : 'Create Teacher'}
+                </button>
+              </div>
+            </form>
           </aside>
         </div>
       ) : null}

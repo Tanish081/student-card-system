@@ -66,10 +66,10 @@ const OverviewSection = ({ user, onNavigate }) => {
         <article className="card-default quick-actions">
           <h2>Quick Actions</h2>
           <div>
-            <button type="button" onClick={() => onNavigate('schools')}>+ Add School</button>
+            <button type="button" onClick={() => onNavigate('students', { action: 'add-student' })}>+ Add Student</button>
+            <button type="button" onClick={() => onNavigate('students', { action: 'add-teacher' })}>+ Add Teacher</button>
             <button type="button" onClick={() => onNavigate('achievements', { tab: 'pending' })}>Verify Batch</button>
             <button type="button" onClick={() => onNavigate('students', { action: 'export' })}>Download Report</button>
-            <button type="button" onClick={() => onNavigate('audit')}>Run SPI Recalc</button>
           </div>
         </article>
 

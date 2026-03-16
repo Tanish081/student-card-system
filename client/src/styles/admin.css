@@ -1607,6 +1607,76 @@
   color: #4a9eff;
 }
 
+.admin-inline-success,
+.admin-inline-error {
+  margin: 10px 0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: var(--text-sm);
+}
+
+.admin-inline-success {
+  background: rgba(46, 213, 115, 0.12);
+  border: 1px solid rgba(46, 213, 115, 0.35);
+  color: #9ff4bc;
+}
+
+.admin-inline-error {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.35);
+  color: #ffb3bb;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 18, 0.62);
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.admin-modal {
+  width: min(640px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.admin-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-modal-head h3 {
+  margin: 0;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: var(--text-lg);
+}
+
+.admin-modal-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-modal-form .admin-inline-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.admin-modal-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 1100px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1616,7 +1686,8 @@
   .analytics-grid,
   .settings-grid,
   .audit-diff-grid,
-  .filter-row {
+  .filter-row,
+  .admin-modal-form {
     grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLoginCanvas from '../components/AdminLoginCanvas';
 import { useAuth } from '../hooks/useAuth';
 import useCountUp from '../hooks/useCountUp';
@@ -101,9 +101,12 @@ const StatCard = ({ stat, index, compact = false }) => {
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, logout, loading } = useAuth();
 
-  const [selectedRole, setSelectedRole] = useState('admin');
+  const initialRole = searchParams.get('role') === 'principal' ? 'principal' : 'admin';
+
+  const [selectedRole, setSelectedRole] = useState(initialRole);
   const [formData, setFormData] = useState({ email: '', password: '', rememberDevice: true });
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState('');

@@ -154,6 +154,15 @@ const LoginPage = () => {
     if (event.target.name === 'email') triggerLogoPulse();
   };
 
+  const handleRoleSelect = (role) => {
+    if (role === 'admin' || role === 'principal') {
+      navigate(`/admin-login?role=${role}`);
+      return;
+    }
+
+    setSelectedRole(role);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
@@ -217,7 +226,7 @@ const LoginPage = () => {
                 type="button"
                 key={role}
                 className={`login-role-tab ${selectedRole === role ? 'is-active' : ''}`}
-                onClick={() => setSelectedRole(role)}
+                onClick={() => handleRoleSelect(role)}
               >
                 {role}
               </button>

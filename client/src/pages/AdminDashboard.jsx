@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import AdminActivityFeed from '../components/admin/AdminActivityFeed';
 import AdminAuditStrip from '../components/admin/AdminAuditStrip';
 import AdminKPICard from '../components/admin/AdminKPICard';
 import AdminPendingQueue from '../components/admin/AdminPendingQueue';
@@ -29,44 +28,6 @@ const FALLBACK_SCHOOLS = [
   { id: 'DPS-PUNE', name: 'DPS Pune', district: 'Pune', students: 1204, avgSPI: 671, status: 'Active' },
   { id: 'RYAN-MUM', name: 'Ryan International', district: 'Mumbai', students: 988, avgSPI: 634, status: 'Active' },
   { id: 'KV-NAG', name: 'Kendriya Vidyalaya', district: 'Nagpur', students: 756, avgSPI: 598, status: 'Review' }
-];
-
-const FALLBACK_ACTIVITY = [
-  {
-    id: 'ac-1',
-    type: 'VERIFY',
-    text: 'Achievement verified — Rahul S., DPS Pune',
-    detail: 'Verified by teacher TCH102, category: academic olympiad',
-    time: '09:24'
-  },
-  {
-    id: 'ac-2',
-    type: 'APPLY',
-    text: 'New opportunity application — Science Olympiad 2025',
-    detail: '6 applications were submitted in the last 10 minutes',
-    time: '09:17'
-  },
-  {
-    id: 'ac-3',
-    type: 'QR SCAN',
-    text: 'QR verification scan — Priya M., Ryan Intl',
-    detail: 'Public verifier endpoint accessed from Mumbai region',
-    time: '09:08'
-  },
-  {
-    id: 'ac-4',
-    type: 'SCHEME',
-    text: 'Scheme eligibility updated — 14 students',
-    detail: 'NSP_SC_ST and NMMS flags recalculated by nightly job',
-    time: '08:59'
-  },
-  {
-    id: 'ac-5',
-    type: 'AUDIT',
-    text: 'Audit entry signed — Principal Nair',
-    detail: 'Action: opportunity-created with hash chained successfully',
-    time: '08:43'
-  }
 ];
 
 const FALLBACK_PENDING = [
@@ -100,26 +61,6 @@ const FALLBACK_PENDING = [
   }
 ];
 
-const resolveActivityType = (action = '') => {
-  const value = action.toLowerCase();
-  if (value.includes('verify')) return 'VERIFY';
-  if (value.includes('opportunity') || value.includes('apply')) return 'APPLY';
-  if (value.includes('scheme') || value.includes('eligibility')) return 'SCHEME';
-  if (value.includes('qr')) return 'QR SCAN';
-  return 'AUDIT';
-};
-
-const toActivityItem = (log, index) => ({
-  id: log._id || `activity-${index}`,
-  type: resolveActivityType(log.action),
-  text: `${(log.action || 'Audit event').replace(/-/g, ' ')}`,
-  detail: `Entity: ${log.entityType || 'Unknown'} · Actor: ${log.actorName || log.actorId || 'system'}`,
-  time: new Date(log.eventTimestamp || log.createdAt || Date.now()).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-});
-
 const computeSPIDistribution = (students = []) => {
   const bins = {
     '0-200': 0,
@@ -151,7 +92,6 @@ const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [activeItem, setActiveItem] = useState('overview');
   const [students, setStudents] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditTotal, setAuditTotal] = useState(0);
@@ -176,20 +116,17 @@ const AdminDashboard = () => {
       setError('');
 
       try {
-        const [studentsRes, teachersRes, opportunitiesRes, auditRes] = await Promise.all([
+        const [studentsRes, opportunitiesRes, auditRes] = await Promise.all([
           api.get('/admin/students'),
-          api.get('/admin/teachers'),
           api.get('/opportunities?page=1&limit=20'),
           api.get('/audit/logs?page=1&limit=30')
         ]);
 
         const loadedStudents = studentsRes?.data?.data?.students || [];
-        const loadedTeachers = teachersRes?.data?.data?.teachers || [];
         const loadedOpportunities = opportunitiesRes?.data?.data?.opportunities || [];
         const loadedLogs = auditRes?.data?.data?.logs || [];
 
         setStudents(loadedStudents);
-        setTeachers(loadedTeachers);
         setOpportunities(loadedOpportunities);
         setAuditLogs(loadedLogs);
         setAuditTotal(Number(auditRes?.data?.data?.total || loadedLogs.length || 0));
@@ -212,11 +149,6 @@ const AdminDashboard = () => {
 
     loadDashboard();
   }, []);
-
-  const activityFeed = useMemo(() => {
-    if (!auditLogs.length) return FALLBACK_ACTIVITY;
-    return auditLogs.slice(0, 12).map(toActivityItem);
-  }, [auditLogs]);
 
   const schoolsData = useMemo(() => {
     const grouped = students.reduce((acc, student) => {
@@ -265,8 +197,6 @@ const AdminDashboard = () => {
       students.filter((student) => (student.eligibilityFlags || []).some((entry) => entry.eligible)).length || 847;
     const activeSchools = new Set(students.map((student) => student.schoolId || 'SCH001')).size || 48;
     const pendingReviews = pendingCount || 231;
-    const qrVerifications =
-      auditLogs.filter((log) => String(log.action || '').toLowerCase().includes('qr')).length || 1084;
 
     return [
       {
@@ -275,13 +205,6 @@ const AdminDashboard = () => {
         delta: '+124 this month',
         icon: 'students',
         trend: [11, 14, 16, 19, 21, 25, 29]
-      },
-      {
-        label: 'Verified achievements',
-        value: verifiedAchievements,
-        delta: '+89 this week',
-        icon: 'trophy',
-        trend: [3, 4, 5, 5, 6, 8, 9]
       },
       {
         label: 'Scheme eligible',
@@ -307,11 +230,11 @@ const AdminDashboard = () => {
         trend: [40, 48, 52, 61, 63, 70, 74]
       },
       {
-        label: 'QR verifications',
-        value: qrVerifications,
-        delta: '+340 this week',
-        icon: 'qr',
-        trend: [22, 25, 30, 32, 37, 40, 44]
+        label: 'Verified achievements',
+        value: verifiedAchievements,
+        delta: '+89 this week',
+        icon: 'trophy',
+        trend: [3, 4, 5, 5, 6, 8, 9]
       }
     ];
   }, [auditLogs, pendingCount, students]);
@@ -381,7 +304,6 @@ const AdminDashboard = () => {
 
           <section className="admin-grid-row one">
             <AdminSPIChart dataByRange={computeSPIDistribution(students)} />
-            <AdminActivityFeed events={activityFeed} />
           </section>
 
           <section className="admin-grid-row two">
